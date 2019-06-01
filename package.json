@@ -4,6 +4,10 @@
 	"description": "Highlight, name, and save locations in your codebase.",
 	"version": "0.0.1",
 	"publisher": "xlntdevelopment",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/jbdoster/highlighter.git"
+	},
 	"engines": {
 		"vscode": "^1.34.0"
 	},
