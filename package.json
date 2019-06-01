@@ -1,8 +1,9 @@
 {
-	"name": "com.xlntdevelopment",
+	"name": "highlighter",
 	"displayName": "highlighter",
 	"description": "Highlight, name, and save locations in your codebase.",
 	"version": "0.0.1",
+	"publisher": "xlntdevelopment",
 	"engines": {
 		"vscode": "^1.34.0"
 	},
