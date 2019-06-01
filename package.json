@@ -4,6 +4,11 @@
 	"description": "Highlight, name, and save locations in your codebase.",
 	"version": "0.0.1",
 	"publisher": "xlntdevelopment",
+	"author": {
+		"name": "Jonathan Doster",
+		"email": "jonathan@whiskerandpaw.co",
+		"url": "https://www.linkedin.com/in/jbdoster/"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/jbdoster/highlighter.git"
