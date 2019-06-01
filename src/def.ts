@@ -108,49 +108,41 @@ export class Highlighter {
         });
         this.subscribed = true;
     }
-    public findHighlight(context: vscode.ExtensionContext) {
+    public async findHighlight(context: vscode.ExtensionContext) {
         console.log('Presenting highlights...');
         var highlights: any = context.workspaceState.get('highlight-details');
         if (highlights.length < 1) {
             vscode.window.showInformationMessage('You do not have any saved highlights');
             return;
         }
-        var names = highlights.map((highlight: any) => { return highlight.name });
-        vscode.window
-            .showInformationMessage('Select a highlight', ...names)
-            .then((selection) => {
-                console.log(selection);
-                var highlightInfo: any = highlights.filter((highlight: any) => { return highlight.name === selection; });
-                vscode.window.showTextDocument(
-                    highlightInfo[0].uri, {
-                        selection: highlightInfo[0].range
-                    });
-                const decorationTypeOptions: vscode.DecorationRenderOptions = {
-                    isWholeLine: true,
-                    light: {
-                        backgroundColor: "#9fbfdf",
-                    },
-                    dark: {
-                        backgroundColor: "#9fbfdf",
-                    },
-                };
-                setTimeout(() => {
-                    const editor = vscode.window.activeTextEditor;
-                    const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-                    const r = new vscode.Range(
-                        new vscode.Position(highlightInfo[0].selection.start.line, highlightInfo[0].selection.start.character),
-                        new vscode.Position(highlightInfo[0].selection.end.line, highlightInfo[0].selection.end.character)
-                    );
-                    if (editor) {
-                        editor.setDecorations(type, [r]);
-                    }
-                }, 700);
-            });
+        const names = highlights.map((highlight: any) => { return highlight.name; });
+        let selection = await vscode.window.showInformationMessage('Select a highlight', ...names);
+        console.log(selection);
+        const highlightInfo: any = highlights.filter((highlight: any) => { return highlight.name === selection; });
+        const r = new vscode.Range(
+            new vscode.Position(highlightInfo[0].startLine, highlightInfo[0].startChar),
+            new vscode.Position(highlightInfo[0].endLine, highlightInfo[0].endChar)
+        );
+        let uri: vscode.Uri = vscode.Uri.parse(highlightInfo[0].uri.path);
+        var editor: vscode.TextEditor = await vscode.window.showTextDocument(uri, {selection: r });
+        if (editor) {
+            const decorationTypeOptions: vscode.DecorationRenderOptions = {
+                isWholeLine: true,
+                light: {
+                    backgroundColor: "#9fbfdf",
+                },
+                dark: {
+                    backgroundColor: "#9fbfdf",
+                },
+            };
+            const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
+            editor.setDecorations(type, [r]);
+        }
     }
     public removeHighlight(context: vscode.ExtensionContext) {
         console.log('Presenting highlights to remove...');
         var highlights: any = context.workspaceState.get('highlight-details');
-        var names = highlights.map((highlight: any) => { return highlight.name });
+        var names = highlights.map((highlight: any) => { return highlight.name; });
         vscode.window
             .showInformationMessage('Remove a highlight', ...names)
             .then((selection) => {
