@@ -1,8 +1,8 @@
 {
 	"name": "highlighter",
 	"displayName": "highlighter",
-	"description": "Highlight, name, and save locations in your codebase.",
-	"version": "0.0.2",
+	"description": "Highlight, name, and save locations in your code files.",
+	"version": "0.0.3",
 	"publisher": "xlntdevelopment",
 	"author": {
 		"name": "Jonathan Doster",
