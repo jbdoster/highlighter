@@ -1,3 +1,4 @@
+[[src/resources/gifs/highlight-lines.gif]]
 <div>
 <div>
 <pre><code></code></pre>
