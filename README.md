@@ -35,16 +35,16 @@
 <p>Highlight Line(s)</p>
 <div>
 <pre><code></code>&nbsp;</pre>
-[[./src/resources/gifs/highlight-lines.gif]]
+[[src/resources/gifs/highlight-lines.gif]]
 </div>
 <p>Find Highlight(s)</p>
 <div>
 <pre><code></code>&nbsp;</pre>
-[[./src/resources/gifs/find-highlight.gif]]
+[[src/resources/gifs/find-highlight.gif]]
 </div>
 <p>Remove Highlighted Line(s)</p>
 <p>&nbsp;</p>
-[[./src/resources/gifs/remove-highlight.gif]]
+[[src/resources/gifs/remove-highlight.gif]]
 <p>&nbsp;</p>
 <p>Happy Coding!</p>
 <div>
