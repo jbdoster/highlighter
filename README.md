@@ -1,3 +1,4 @@
+![logo not generated](src/resources/imgs/logo.png)
 # Visual Studio Code Highlighter Extension
 
 *Commands*
@@ -8,13 +9,13 @@
 - Remove All Saved Highlights
 
 # Highlight Line(s)
-![example not generated](src/resources/gifs/highlight-lines.gif)
+![highlight-lines example not generated](src/resources/gifs/highlight-lines.gif)
 
 # Find Highlight(s)
-![example not generated](src/resources/gifs/find-highlight.gif)
+![find-highlight example not generated](src/resources/gifs/find-highlight.gif)
 
 # Remove Highlight(s)
-![example not generated](src/resources/gifs/remove-highlight.gif)
+![remove-highlight example not generated](src/resources/gifs/remove-highlight.gif)
 
 Happy Coding!
 
