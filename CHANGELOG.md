@@ -12,7 +12,8 @@
 --audited 185 packages in 11.002s
 --found 0 vulnerabilities
 
-## [1.0.5] - 2019-06-10
+## [1.0.7] - 2019-06-10
 ### Added
 - Added choices for highlight colors
 - Fixed release directory and resource fetching issue
+- Fixed active text editor not updating upon highlight removal issue
