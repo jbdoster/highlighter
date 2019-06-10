@@ -59,15 +59,19 @@ export class PageHighlighter {
             let wait = await this.__subscribe(context);
         }
         var highlights: any = context.workspaceState.get('highlight-details');
+        if (highlights.length < 1) {
+            vscode.window.showInformationMessage('You have no highlights to remove');
+            return Promise.resolve();
+        }
         var names = highlights.map((highlight: any) => { return highlight.name; });
         let selection: any = await vscode.window.showInformationMessage('Remove a highlight', ...names);
         let editor: any = vscode.window.activeTextEditor;
         var highlightInfo: Array<object> = highlights.filter((highlight: any) => { return highlight.name === selection; });
         console.log(selection);
-        return Promise.all([
-            this.__removeStoredObject(context, highlights, selection),
-            this.__removeDecoration(editor, highlightInfo[0]),
-        ]);
+        this.__removeStoredObject(context, highlights, selection);
+        this.__removeDecoration(editor, highlightInfo[0]);
+        // return Promise.all([
+        // ]);
     }
     public async removeAllHighlights(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
@@ -243,8 +247,9 @@ export class PageHighlighter {
         });
     }
     private async __removeDecoration(editor: vscode.TextEditor, highlightInfo: any) {
-        if (editor) {
-            const color = new vscode.ThemeColor('editor.background');
+        let e: any = vscode.window.activeTextEditor;
+        if (e) {
+            const color: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
             const decorationTypeOptions: vscode.DecorationRenderOptions = {
                 isWholeLine: true,
                 light: {
@@ -260,7 +265,7 @@ export class PageHighlighter {
                     new vscode.Position(highlightInfo.startLine, highlightInfo.startChar),
                     new vscode.Position(highlightInfo.endLine, highlightInfo.endChar)
                 );
-                editor.setDecorations(type, [r]);
+                e.setDecorations(type, [r]);
                 return Promise.resolve('decorations removed');
             } else {
                 return Promise.reject('No color theme pulled from config settings');

@@ -2,7 +2,7 @@
 	"name": "highlighter",
 	"displayName": "highlighter",
 	"description": "Highlight, name, and save locations in your code files.",
-	"version": "1.0.5",
+	"version": "1.0.7",
 	"publisher": "xlntdevelopment",
 	"author": {
 		"name": "Jonathan Doster",
