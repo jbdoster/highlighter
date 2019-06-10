@@ -39,7 +39,16 @@ export class PageHighlighter {
         let uri: vscode.Uri = vscode.Uri.parse(highlightInfo[0].uri.path);
         var editor: vscode.TextEditor = await vscode.window.showTextDocument(uri, { selection: r });
         if (editor) {
-            const type = vscode.window.createTextEditorDecorationType(constants.decorationTypeOptions);
+            const decorationTypeOptions: vscode.DecorationRenderOptions = {
+                isWholeLine: true,
+                light: {
+                    backgroundColor: `#${highlightInfo.color}`,
+                },
+                dark: {
+                    backgroundColor: `#${highlightInfo.color}`,
+                },
+            };
+            const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
             editor.setDecorations(type, [r]);
         }
         return Promise.resolve();
@@ -191,7 +200,7 @@ export class PageHighlighter {
         colorPicker.canSelectMany = false;
         colorPicker.placeholder = 'Pick a color';
         let buttons: Array<vscode.QuickInputButton> = [];
-        var baseDir = path.resolve(__dirname).replace('out', 'src/');
+        var baseDir = path.resolve(__dirname).replace('out', 'extension/');
         const colorsDirFiles: Array<string> = fs.readdirSync(`${baseDir}${constants.COLORS_PATH}`);
         const options: vscode.MessageOptions = {modal: true};
         colorsDirFiles.forEach((png, index) => {
@@ -210,7 +219,7 @@ export class PageHighlighter {
                 colorPicker.dispose();
                 resolve(hexValue);
             });
-        })
+        });
     }
     private __getHexValue(colorsDir: string, selectionPath: any) {
         const hexValue: string = selectionPath.replace(colorsDir, '').replace('.png', '');
@@ -289,8 +298,17 @@ export class FolderHighlighter {
             if (event) {
                 var currentPageHighlights = highlights.filter((highlight: any) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
                 if (currentPageHighlights) {
-                    currentPageHighlights.forEach((pageHighlight: any) => {
-                        const type = vscode.window.createTextEditorDecorationType(constants.decorationTypeOptions);
+                    currentPageHighlights.forEach((pageHighlight: any, index: any) => {
+                        const decorationTypeOptions: vscode.DecorationRenderOptions = {
+                            isWholeLine: true,
+                            light: {
+                                backgroundColor: `#${currentPageHighlights[index].color}`,
+                            },
+                            dark: {
+                                backgroundColor: `#${currentPageHighlights[index].color}`,
+                            },
+                        };
+                        const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
                         const r = new vscode.Range(
                             new vscode.Position(pageHighlight.startLine, pageHighlight.startChar),
                             new vscode.Position(pageHighlight.endLine, pageHighlight.endChar)
