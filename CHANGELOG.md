@@ -12,7 +12,7 @@
 --audited 185 packages in 11.002s
 --found 0 vulnerabilities
 
-## [1.0.3] - 2019-06-10
+## [1.0.4] - 2019-06-10
 ### Added
 - Added choices for highlight colors
 - Fixed release directory and resource fetching issue
