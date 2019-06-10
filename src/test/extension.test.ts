@@ -5,7 +5,7 @@ import * as CONST from './const';
 import * as DEFINITIONS from '../def';
 import * as jsonfile from 'jsonfile';
 suite("Units", function () {
-    let highlighter_instance: DEFINITIONS.Highlighter = new DEFINITIONS.Highlighter();
+    let highlighter_instance: DEFINITIONS.PageHighlighter = new DEFINITIONS.PageHighlighter();
     test("Highlighter instance has all required methods?", function() {
         assert.equal(typeof highlighter_instance.highlightSelection, typeof  Function);
         assert.equal(typeof highlighter_instance.findHighlight, typeof  Function);
