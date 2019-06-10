@@ -13,6 +13,7 @@
 		"type": "git",
 		"url": "https://github.com/jbdoster/highlighter.git"
 	},
+	"keywords": ["highlighter", "xlntdevelopment", "marker", "location", "organization", "organize", "mark", "tag"],
 	"engines": {
 		"vscode": "^1.34.0"
 	},
@@ -21,7 +22,6 @@
 	],
 	"activationEvents": [
 		"onCommand:extension.highlightLines",
-		"onCommand:extension.highlightFolder",
 		"onCommand:extension.findHighlight",
 		"onCommand:extension.removeHighlight",
 		"onCommand:extension.removeAllHighlights"
@@ -32,10 +32,6 @@
 			{
 				"command": "extension.highlightLines",
 				"title": "Highlight Line(s)"
-			},
-			{
-				"command": "extension.highlightFolder",
-				"title": "Highlight Folder(s)"
 			},
 			{
 				"command": "extension.findHighlight",
