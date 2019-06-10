@@ -1,4 +1,4 @@
-![logo not generated](src/resources/imgs/logo.png)
+![logo not generated](extension/resources/imgs/logo.png)
 # Visual Studio Code Highlighter Extension
 
 *Commands*
