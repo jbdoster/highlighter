@@ -8,3 +8,4 @@ export const decorationTypeOptions: vscode.DecorationRenderOptions = {
         backgroundColor: "#9fbfdf",
     },
 };
+export const COLORS_PATH = 'resources/imgs/colors-picker/';

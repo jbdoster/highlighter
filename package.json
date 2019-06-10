@@ -2,7 +2,7 @@
 	"name": "highlighter",
 	"displayName": "highlighter",
 	"description": "Highlight, name, and save locations in your code files.",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"publisher": "xlntdevelopment",
 	"author": {
 		"name": "Jonathan Doster",
@@ -21,6 +21,7 @@
 	],
 	"activationEvents": [
 		"onCommand:extension.highlightLines",
+		"onCommand:extension.highlightFolder",
 		"onCommand:extension.findHighlight",
 		"onCommand:extension.removeHighlight",
 		"onCommand:extension.removeAllHighlights"
@@ -31,6 +32,10 @@
 			{
 				"command": "extension.highlightLines",
 				"title": "Highlight Line(s)"
+			},
+			{
+				"command": "extension.highlightFolder",
+				"title": "Highlight Folder(s)"
 			},
 			{
 				"command": "extension.findHighlight",
@@ -63,5 +68,8 @@
 	"dependencies": {
 		"@types/jsonfile": "^5.0.0",
 		"jsonfile": "^5.0.0"
-	}
+	},
+	"extensionDependencies": [
+		"lihui.vs-color-picker"
+	]
 }
