@@ -15,10 +15,12 @@ export function activate(context: vscode.ExtensionContext) {
 	let removeAllHighlights = vscode.commands.registerCommand('extension.removeAllHighlights', () => {
 		highlighter.removeAllHighlights(context);
 	});
-	vscode.window.onDidChangeActiveTextEditor((event: any) => {
-		subscriber.onTextDocumentChangedHandler(context, event);
+	vscode.window.onDidChangeActiveTextEditor((editor: vscode.TextEditor | undefined) => {
+		/** User changed active text file */
+		editor ? subscriber.onActiveEditorDidChangeHandler(context, editor, highlighter) : console.log('No changes');
 	});
 	vscode.workspace.onDidChangeTextDocument((event: vscode.TextDocumentChangeEvent) => {
+		/** User made changes in active text file */
 		subscriber.onTextDocumentChangedHandler(context, event);
 	});
 	context.subscriptions.push( 

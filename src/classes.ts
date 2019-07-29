@@ -8,6 +8,8 @@ export class Highlighter implements IHighlighter {
     
     /** PUBLIC */
     public async highlightSelection(context: vscode.ExtensionContext): Promise<number> {
+
+        // Get active text file
         console.log('Highlight lines called...');
         const editor = vscode.window.activeTextEditor;
 
@@ -47,8 +49,12 @@ export class Highlighter implements IHighlighter {
         return Promise.resolve(0);
     }
     public async findHighlight(context: vscode.ExtensionContext): Promise<number> {
+
+        // Get highlights
         console.log('Presenting highlights...');
         var highlights: Array<IHighlight> | undefined = context.globalState.get('highlight-details');
+        
+        // Has highlights?
         if (!highlights) {
             vscode.window.showInformationMessage('You do not have any saved highlights');
             return Promise.resolve(1);
@@ -57,6 +63,8 @@ export class Highlighter implements IHighlighter {
             vscode.window.showInformationMessage('You do not have any saved highlights');
             return Promise.resolve(1);
         }
+
+        // Present highlights
         const names   = highlights.map((highlight: any) => { 
             return highlight.name; 
         });
@@ -64,6 +72,8 @@ export class Highlighter implements IHighlighter {
         const highlight: IHighlight[] = highlights.filter((highlight: any) => { 
             return highlight.name === selection; 
         });
+
+        // Bring selection to view
         let uri: vscode.Uri = vscode.Uri.parse(highlight[0].uri.path);
         let range: vscode.Range = new vscode.Range(highlight[0].selection.start, highlight[0].selection.end);
         var editor: vscode.TextEditor = await vscode.window.showTextDocument(uri, { 
@@ -85,6 +95,8 @@ export class Highlighter implements IHighlighter {
         return Promise.resolve(0);
     }
     public async removeHighlight(context: vscode.ExtensionContext): Promise<number> {
+
+        // Get highlights
         console.log('Presenting highlights to remove...');
         var highlights: IHighlight[] | undefined = context.globalState.get('highlight-details');
 
@@ -118,21 +130,42 @@ export class Highlighter implements IHighlighter {
         return Promise.resolve(0);
     }
     public async removeAllHighlights(context: vscode.ExtensionContext) {
+
+        // Get highlights
         let highlights: IHighlight[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+
+        // Has highlights?
         if (!highlights) {
             vscode.window.showInformationMessage('No highlights to remove');
             return Promise.resolve(1);
         }
+
+        // Remove and decorate current page
         let editor: any = vscode.window.activeTextEditor;
+        context.globalState.update('highlight-details', []);
         highlights.forEach((highlight: IHighlight) => {
             this.decorate(editor, highlight.hexValue, editor.selection);
         });
-        context.globalState.update('highlight-details', []);
         vscode.window.showInformationMessage('All your highlights have been removed');
+        return Promise.resolve(0);
+    }
+    public async decorate(editor: vscode.TextEditor, hexValue: string | vscode.ThemeColor, selection: vscode.Selection): Promise<number> {
+        const decorationTypeOptions: vscode.DecorationRenderOptions = {
+            isWholeLine: true,
+            light: {
+                backgroundColor: `#${hexValue}`,
+            },
+            dark: {
+                backgroundColor: `#${hexValue}`,
+            },
+        };
+        const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
+        editor.setDecorations(type, [new vscode.Range(selection.start, selection.end)]);
         return Promise.resolve(0);
     }
     /** PRIVATE */
     private async acquireHighlightName(): Promise<string> {
+
         // Ask for input
         let input: vscode.InputBox = vscode.window.createInputBox();
         input.title = "Give a name for this highlight to find it again!";
@@ -151,12 +184,16 @@ export class Highlighter implements IHighlighter {
         });
     }
     private async acquireColorChoice(): Promise<string> {
+
+        // Create color quick picker
         let colorPicker: vscode.QuickPick<vscode.QuickPickItem> = vscode.window.createQuickPick();
         colorPicker.canSelectMany = false;
         colorPicker.placeholder = 'Pick a color';
         let buttons: Array<vscode.QuickInputButton> = [];
         var baseDir = path.resolve(__dirname).replace('out', 'extension/');
         const colorsDirFiles: Array<string> = fs.readdirSync(`${baseDir}${constants.COLORS_PATH}`);
+
+        // Create and present buttons
         colorsDirFiles.forEach((png, index) => {
             let button: vscode.QuickInputButton = {
                 iconPath: vscode.Uri.file(`${baseDir}${constants.COLORS_PATH}${png}`)
@@ -168,6 +205,8 @@ export class Highlighter implements IHighlighter {
         });
         colorPicker.buttons = buttons;
         colorPicker.show();
+
+        // Await and resolve user's color selection
         return new Promise((resolve, reject) => {
             colorPicker.onDidTriggerButton((selection: any) => {
                 const hexValue: string = selection.iconPath.path.replace(`${baseDir}${constants.COLORS_PATH}`, '').replace('.png', '');
@@ -176,23 +215,12 @@ export class Highlighter implements IHighlighter {
             });
         });
     }
-    private async decorate(editor: vscode.TextEditor, hexValue: string | vscode.ThemeColor, selection: vscode.Selection): Promise<number> {
-        const decorationTypeOptions: vscode.DecorationRenderOptions = {
-            isWholeLine: true,
-            light: {
-                backgroundColor: `#${hexValue}`,
-            },
-            dark: {
-                backgroundColor: `#${hexValue}`,
-            },
-        };
-        const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-        editor.setDecorations(type, [new vscode.Range(selection.start, selection.end)]);
-        return Promise.resolve(0);
-    }
     private saveHighlight(context: vscode.ExtensionContext, editor: vscode.TextEditor, hexValue: string, name: string): Promise<number> {
-        console.log('No previous object, saving line highlight context for new key', name);
+
+        // Get highlights
         let highlights: object[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+
+        // Has highlight?
         if (!highlights) {
             context.globalState.update(constants.HIGHLIGHTS_KEY, [{
                 name: name,
@@ -212,38 +240,21 @@ export class Highlighter implements IHighlighter {
     }
 }
 export class Subscriber implements ISubscriber {
-    public async onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
+    public async onActiveEditorDidChangeHandler(context: vscode.ExtensionContext, editor: vscode.TextEditor, highlighter: Highlighter) {
+        /** Populate new view with existing highlights */
         console.log('active text editor changed');
-        var highlights: any = context.globalState.get('highlight-details');
-        if (event) {
-            var currentPageHighlights = highlights.filter((highlight: any) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
+        var highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+        if (editor && highlights) {
+            var currentPageHighlights: Array<IHighlight> = highlights.filter((highlight: any) => { return highlight['uri']['path'] === editor['document']['uri']['path']; });
             if (currentPageHighlights) {
-                currentPageHighlights.forEach((pageHighlight: any) => {
-                    const decorationTypeOptions: vscode.DecorationRenderOptions = {
-                        isWholeLine: true,
-                        light: {
-                            backgroundColor: `#${pageHighlight.color}`,
-                        },
-                        dark: {
-                            backgroundColor: `#${pageHighlight.color}`,
-                        },
-                    };
-                    const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-                    const r = new vscode.Range(
-                        new vscode.Position(pageHighlight.startLine, pageHighlight.startChar),
-                        new vscode.Position(pageHighlight.endLine, pageHighlight.endChar)
-                    );
-                    const __innerEditor = vscode.window.activeTextEditor;
-
-                    if (__innerEditor) {
-                        __innerEditor.setDecorations(type, [r]);
-                    }
+                currentPageHighlights.forEach((highlight: IHighlight) => {
+                    highlighter.decorate(editor, highlight.hexValue, highlight.selection);
                 });
             }
         }
         return Promise.resolve(0);
     }
-    public onActiveEditorDidChangeHandler(context: vscode.ExtensionContext) {
+    public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
         return Promise.resolve(0);
     }
 }
