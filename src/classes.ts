@@ -255,7 +255,19 @@ export class Subscriber implements ISubscriber {
         return Promise.resolve(0);
     }
     public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
-        
+        /** Update persisted highlight positions if affected by carriage return */
+
+        // Get highlights
+        var highlights:        Array<IHighlight> | undefined = context.globalState.get('highlight-details');
+
+        // List the affected highlights
+        // var shiftedHighlights: Array<IHighlight> | null = highlights ? highlights.map((h: IHighlight)=>{
+        //     if (h.selection.start > event.contentChanges[0].range.start) {
+        //         // TODO SELECTION READ ONLY
+        //         // h.selection.start =  
+        //     }
+        // }) : null;
+
         return Promise.resolve(0);
     }
 }
