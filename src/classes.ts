@@ -255,6 +255,7 @@ export class Subscriber implements ISubscriber {
         return Promise.resolve(0);
     }
     public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
+        
         return Promise.resolve(0);
     }
 }

@@ -21,7 +21,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	vscode.workspace.onDidChangeTextDocument((event: vscode.TextDocumentChangeEvent) => {
 		/** User made changes in active text file */
-		subscriber.onTextDocumentChangedHandler(context, event);
+		subscriber.onTextDocumentChangedHandler(context, event, highlighter);
 	});
 	context.subscriptions.push( 
 								highlightLines, 
