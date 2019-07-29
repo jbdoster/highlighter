@@ -9,3 +9,4 @@ export const decorationTypeOptions: vscode.DecorationRenderOptions = {
     },
 };
 export const COLORS_PATH = 'resources/imgs/colors-picker/';
+export const HIGHLIGHTS_KEY: string = '_highlights';

@@ -23,7 +23,7 @@ export class PageHighlighter {
             let wait = await this.__subscribe(context);
         }
         console.log('Presenting highlights...');
-        var highlights: any = context.workspaceState.get('highlight-details');
+        var highlights: any = context.globalState.get('highlight-details');
         if (highlights.length < 1) {
             vscode.window.showInformationMessage('You do not have any saved highlights');
             return Promise.resolve();
@@ -58,7 +58,7 @@ export class PageHighlighter {
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
         }
-        var highlights: any = context.workspaceState.get('highlight-details');
+        var highlights: any = context.globalState.get('highlight-details');
         if (highlights.length < 1) {
             vscode.window.showInformationMessage('You have no highlights to remove');
             return Promise.resolve();
@@ -77,19 +77,19 @@ export class PageHighlighter {
         if (!this.subscribed) {
             this.__subscribe(context);
         }
-        let highlights: any = context.workspaceState.get('highlight-details');
+        let highlights: any = context.globalState.get('highlight-details');
         let editor: any = vscode.window.activeTextEditor;
         highlights.forEach((highlight: any) => {
             this.__removeDecoration(editor, highlight);
         });
-        context.workspaceState.update('highlight-details', []);
+        context.globalState.update('highlight-details', []);
         vscode.window.showInformationMessage('All your highlights have been removed');
     }
     // public async highlightFolder(context: vscode.ExtensionContext) {
     //     if (!this.subscribed) {
     //         this.__subscribe(context);
     //     }
-    //     context.workspaceState.get('')
+    //     context.globalState.get('')
     // }
     private async __handleUserInput(context: vscode.ExtensionContext, editor: vscode.TextEditor) {
         let input = vscode.window.createInputBox();
@@ -122,10 +122,10 @@ export class PageHighlighter {
         const r: vscode.Range = this.__produceRange(editor);
         editor.setDecorations(type, [r]);
         const key = `highlight-details`;
-        const previousObject: any = context.workspaceState.get(key);
+        const previousObject: any = context.globalState.get(key);
         if (!previousObject) {
             console.log('No previous object, saving line highlight context for new key', key);
-            context.workspaceState.update(key, [{
+            context.globalState.update(key, [{
                 name: highlightName,
                 color: hexValue,
                 range: r,
@@ -160,7 +160,7 @@ export class PageHighlighter {
         console.log('not yet subscribed, setting all listeners...');
         vscode.window.onDidChangeActiveTextEditor((event) => {
             console.log('active text editor changed');
-            var highlights: any = context.workspaceState.get('highlight-details');
+            var highlights: any = context.globalState.get('highlight-details');
             if (event) {
                 var currentPageHighlights = highlights.filter((highlight: any) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
                 if (currentPageHighlights) {
@@ -240,7 +240,7 @@ export class PageHighlighter {
     }
     private async __removeStoredObject(context: vscode.ExtensionContext, highlights: Array<object>, selection: string) {
         let newHighlights = highlights.filter((highlight: any) => { return highlight.name !== selection; });
-        context.workspaceState.update('highlight-details', newHighlights)
+        context.globalState.update('highlight-details', newHighlights)
         .then((result) => {
             vscode.window.showInformationMessage(`highlight '${selection}' removed`);
             return Promise.resolve();
@@ -275,7 +275,7 @@ export class PageHighlighter {
         }
     }
     private async __highlightExists(context: vscode.ExtensionContext, input: string) {
-        var highlights: any = context.workspaceState.get('highlight-details');
+        var highlights: any = context.globalState.get('highlight-details');
         if (!highlights) {
             return Promise.resolve(false);
         }
@@ -285,49 +285,5 @@ export class PageHighlighter {
         } else {
             return Promise.resolve(false);
         }
-    }
-}
-export class FolderHighlighter {
-    private subscribed = false;
-    public async highlightFolder(context: vscode.ExtensionContext) {
-        if (!this.subscribed) {
-            this.__subscribe(context);
-        }
-        context.workspaceState.get('');
-    }
-    private __subscribe(context: vscode.ExtensionContext) {
-        console.log('not yet subscribed, setting all listeners...');
-        vscode.window.onDidChangeActiveTextEditor((event) => {
-            console.log('active text editor changed');
-            var highlights: any = context.workspaceState.get('highlight-details');
-            if (event) {
-                var currentPageHighlights = highlights.filter((highlight: any) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
-                if (currentPageHighlights) {
-                    currentPageHighlights.forEach((pageHighlight: any, index: any) => {
-                        const decorationTypeOptions: vscode.DecorationRenderOptions = {
-                            isWholeLine: true,
-                            light: {
-                                backgroundColor: `#${currentPageHighlights[index].color}`,
-                            },
-                            dark: {
-                                backgroundColor: `#${currentPageHighlights[index].color}`,
-                            },
-                        };
-                        const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-                        const r = new vscode.Range(
-                            new vscode.Position(pageHighlight.startLine, pageHighlight.startChar),
-                            new vscode.Position(pageHighlight.endLine, pageHighlight.endChar)
-                        );
-                        const __innerEditor = vscode.window.activeTextEditor;
-                        if (__innerEditor) {
-                            __innerEditor.setDecorations(type, [r]);
-                        }
-                    });
-                }
-            } else {
-
-            }
-        });
-        this.subscribed = true;
     }
 }

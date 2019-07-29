@@ -1,12 +1,10 @@
 import * as vscode from 'vscode';
-import { PageHighlighter } from './def';
+import { Highlighter, Subscriber } from './classes';
 export function activate(context: vscode.ExtensionContext) {
-	let highlighter: PageHighlighter = new PageHighlighter();
+	let highlighter: Highlighter;
+	let subscriber: Subscriber;
 	let highlightLines = vscode.commands.registerCommand('extension.highlightLines', () => {
 		highlighter.highlightSelection(context);
-	});
-	let highlightFolder = vscode.commands.registerCommand('extension.highlightFolder', () => {
-		let workspaceEditor: vscode.WorkspaceEdit = new vscode.WorkspaceEdit();
 	});
 	let findHighlight = vscode.commands.registerCommand('extension.findHighlight', () => {
 		highlighter.findHighlight(context);
@@ -17,12 +15,19 @@ export function activate(context: vscode.ExtensionContext) {
 	let removeAllHighlights = vscode.commands.registerCommand('extension.removeAllHighlights', () => {
 		highlighter.removeAllHighlights(context);
 	});
+	vscode.window.onDidChangeActiveTextEditor((event: any) => {
+		subscriber.onTextDocumentChangedHandler(context, event);
+	});
+	vscode.workspace.onDidChangeTextDocument((event: vscode.TextDocumentChangeEvent) => {
+		subscriber.onTextDocumentChangedHandler(context, event);
+	});
 	context.subscriptions.push( 
 								highlightLines, 
-								highlightFolder, 
 								findHighlight, 
 								removeHighlight, 
 								removeAllHighlights
 								);
 }
-export function deactivate() { }
+export function deactivate() { 
+
+}
