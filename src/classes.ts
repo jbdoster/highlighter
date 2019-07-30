@@ -33,7 +33,7 @@ export class Highlighter implements IHighlighter {
             let existingMatches: Array<any> = highlights.filter(h => {return h.name === name; });
             
             // Exists? Reproduce try again
-            if (existingMatches.length > 1) {
+            if (existingMatches.length > 0) {
                 vscode.window.showInformationMessage(`Highlight '${name}' already exists, please choose a different name`);
                 this.highlightSelection(context);
                 return Promise.resolve(1);
@@ -79,35 +79,34 @@ export class Highlighter implements IHighlighter {
     public async removeHighlight(context: vscode.ExtensionContext): Promise<number> {
 
         // Get highlights
-        console.log('Presenting highlights to remove...');
-        var highlights: IHighlight[] | undefined = context.globalState.get('highlight-details');
-
-        // Are there highlights to remove?
-        if (!highlights) {
-            vscode.window.showInformationMessage('You have no highlights to remove');
-            return Promise.resolve(1);
-        }
-        if (highlights.length < 1) {
-            vscode.window.showInformationMessage('You have no highlights to remove');
+        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+        
+        // Has highlights?
+        if (!highlights || highlights.length < 1) {
+            vscode.window.showInformationMessage('You do not have any saved highlights');
             return Promise.resolve(1);
         }
 
-        // Prompt user to choose highlight to remove and wait for their choice
-        var names = highlights.map((highlight: any) => { return highlight.name; });
-        let selection: string = await vscode.window.showInformationMessage('Remove a highlight', ...names);
-        let editor: any = vscode.window.activeTextEditor;
-        let i: number;
+        //  Get user's highlight selection to bring to view
+        let selectedHighlight: IHighlight = await this.showHighlights(highlights);
 
         // Pop index
         highlights.forEach((highlight: IHighlight, index: number) => {
-            if (highlight.name === selection) {
+            if (highlight.name === selectedHighlight.name) {
                 highlights ? highlights.splice(index, 1) : console.log('No index to splice');
             }
         });
 
-        // Restore original window line theme color
-        const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
-        this.decorate(editor, hexValue, editor.selection);
+        // Update saved highlights object
+        context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+
+        // Get active editor and restore lines to original theme color
+        let editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+        if (editor) {
+            // Restore original window line theme color
+            const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
+            this.decorate(editor, hexValue, editor.selection);
+        }
 
         return Promise.resolve(0);
     }
