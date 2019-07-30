@@ -67,8 +67,13 @@ export class Highlighter implements IHighlighter {
         let selectedHighlight: IHighlight = await this.showHighlights(highlights);
 
         //  Take the user to their selected highlight
-        this.selectHighlightLocation(selectedHighlight);
-        
+        let range: vscode.Range = new vscode.Range(selectedHighlight.selection.start, selectedHighlight.selection.end);
+        var editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, { 
+            selection: range
+        });
+
+        // Decorate the located highlight
+        this.decorate(editor, selectedHighlight.hexValue, selectedHighlight.selection);
         return Promise.resolve(0);
     }
     public async removeHighlight(context: vscode.ExtensionContext): Promise<number> {
@@ -201,14 +206,14 @@ export class Highlighter implements IHighlighter {
         if (!highlights) {
             context.globalState.update(constants.HIGHLIGHTS_KEY, [{
                 name: name,
-                color: hexValue,
+                hexValue: hexValue,
                 uri: editor.document.uri,
                 selection: editor.selection
             }]);
         } else {
             highlights.push({
                 name: name,
-                color: hexValue,
+                hexValue: hexValue,
                 uri: editor.document.uri,
                 selection: editor.selection
             });
@@ -243,36 +248,86 @@ export class Highlighter implements IHighlighter {
     private async selectHighlightLocation(selectedHighlight: IHighlight) {
 
         // Bring selection to view
-        let range: vscode.Range = new vscode.Range(selectedHighlight.selection.start, selectedHighlight.selection.end);
-        var editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, { 
-            selection: range
-        });
-        if (editor) {
-
-            // Decorate presented view
-            this.decorate(editor, selectedHighlight.hexValue, selectedHighlight.selection);
-        }
+        
     }
 }
 export class Subscriber implements ISubscriber {
-    public async onActiveEditorDidChangeHandler(context: vscode.ExtensionContext, editor: vscode.TextEditor, highlighter: Highlighter) {
+    public async onActiveEditorDidChangeHandler(context: vscode.ExtensionContext, editor: vscode.TextEditor, highlighter: Highlighter): Promise<void> {
+ 
         /** Populate new view with existing highlights */
-        console.log('active text editor changed');
         var highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-        if (editor && highlights) {
-            var currentPageHighlights: Array<IHighlight> = highlights.filter((highlight: any) => { return highlight['uri']['path'] === editor['document']['uri']['path']; });
-            if (currentPageHighlights) {
-                currentPageHighlights.forEach((highlight: IHighlight) => {
-                    highlighter.decorate(editor, highlight.hexValue, highlight.selection);
+        if (highlights) {
+            var applyHighlights: Array<IHighlight> = highlights.filter(h => {return h.uri === editor.document.uri;});
+            applyHighlights.forEach((highlight: IHighlight) => {
+                highlighter.decorate(editor, highlight.hexValue, highlight.selection);
+            });
+        }
+        return Promise.resolve();
+    }
+    public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter): Promise<void> {
+        
+        // Result of carriage return?
+        if (event.contentChanges[0].text.includes("\n")) {
+
+            // Get highlights
+            let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+            
+            if (highlights) {
+                
+                // Any affected highlights?
+                let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > event.contentChanges[0].range.start;});
+
+                // Adjust selection positions
+                affectedHighlights.map(h=>{
+                    h.selection = new vscode.Selection(
+                        new vscode.Position(h.selection.start.line + 1, h.selection.start.character), 
+                        new vscode.Position(h.selection.end.line   + 1, h.selection.end.character  ) 
+                    );
                 });
+                
+                // Update affected highlights
+                highlights.forEach((h, index)=>{
+                    if (h.name === affectedHighlights[index].name && highlights) {
+                        highlights[index] = affectedHighlights[index];
+                    }
+                });
+
+                // Save new highlights
+                context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
             }
         }
-        return Promise.resolve(0);
-    }
-    public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
-        return Promise.resolve(0);
-    }
-}
-export class Util {
 
+        // Result of line deleted? 
+        if (event.contentChanges[0].text === "") {
+
+            // Get highlights
+            let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+                        
+            if (highlights) {
+                
+                // Any affected highlights?
+                let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > event.contentChanges[0].range.start;});
+
+                // Adjust selection positions
+                affectedHighlights.map(h=>{
+                    h.selection = new vscode.Selection(
+                        new vscode.Position(h.selection.start.line - 1, h.selection.start.character), 
+                        new vscode.Position(h.selection.end.line   - 1, h.selection.end.character  ) 
+                    );
+                });
+                
+                // Update affected highlights
+                highlights.forEach((h, index)=>{
+                    if (h.name === affectedHighlights[index].name && highlights) {
+                        highlights[index] = affectedHighlights[index];
+                    }
+                });
+
+                // Save new highlights
+                context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+            }
+
+        }
+        return Promise.resolve();
+    }
 }
