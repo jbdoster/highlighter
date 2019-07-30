@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as constants from './constants';
 import * as fs from 'fs';
 import * as path from 'path';
+import { rejects } from 'assert';
 
 export class Highlighter implements IHighlighter {
     
@@ -19,40 +20,38 @@ export class Highlighter implements IHighlighter {
             return Promise.resolve(1);
         }
 
+        
         // Wait for user to enter value
         let name: string = await this.acquireHighlightName();
+        
+        // Get highlights
+        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+
+        if (highlights) {
+
+            //  Pull list of existing matching names
+            let existingMatches: Array<any> = highlights.filter(h => {return h.name === name; });
+            
+            // Exists? Reproduce try again
+            if (existingMatches.length > 1) {
+                vscode.window.showInformationMessage(`Highlight '${name}' already exists, please choose a different name`);
+                this.highlightSelection(context);
+                return Promise.resolve(1);
+            }
+        }
 
         // Wait for user to choose highlight color
         let hexValue: string = await this.acquireColorChoice();
 
-        // Does this highlight already exist?
-        var highlights: Array<IHighlight> | undefined = context.globalState.get('highlight-details');
-
-        // No pre-existing highlights? Save
-        if (!highlights) {
-            this.saveHighlight(context, editor, hexValue, name);
-            this.decorate(editor, hexValue, editor.selection);
-        } else {
-            var exists: boolean = false;
-            highlights.forEach((highlight: IHighlight) => {
-                if (highlight.name === name) {
-                    exists = true;
-                }
-            });
-            if (exists) {
-                vscode.window.showInformationMessage(`Highlight '${name}' already exists, please choose a different name`);
-                return Promise.resolve(1);
-            }
-            this.saveHighlight(context, editor, hexValue, name);
-            this.decorate(editor, hexValue, editor.selection);
-        }
+        // Save hightlight and decorate current view
+        this.saveHighlight(context, editor, hexValue, name);
+        this.decorate(editor, hexValue, editor.selection);
         return Promise.resolve(0);
     }
     public async findHighlight(context: vscode.ExtensionContext): Promise<number> {
 
         // Get highlights
-        console.log('Presenting highlights...');
-        var highlights: Array<IHighlight> | undefined = context.globalState.get('highlight-details');
+        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
         
         // Has highlights?
         if (!highlights) {
@@ -64,34 +63,12 @@ export class Highlighter implements IHighlighter {
             return Promise.resolve(1);
         }
 
-        // Present highlights
-        const names   = highlights.map((highlight: any) => { 
-            return highlight.name; 
-        });
-        let selection = await vscode.window.showInformationMessage('Select a highlight', ...names);
-        const highlight: IHighlight[] = highlights.filter((highlight: any) => { 
-            return highlight.name === selection; 
-        });
+        //  Get user's highlight selection to bring to view
+        let selectedHighlight: IHighlight = await this.showHighlights(highlights);
 
-        // Bring selection to view
-        let uri: vscode.Uri = vscode.Uri.parse(highlight[0].uri.path);
-        let range: vscode.Range = new vscode.Range(highlight[0].selection.start, highlight[0].selection.end);
-        var editor: vscode.TextEditor = await vscode.window.showTextDocument(uri, { 
-            selection: range
-        });
-        if (editor) {
-            const decorationTypeOptions: vscode.DecorationRenderOptions = {
-                isWholeLine: true,
-                light: {
-                    backgroundColor: `#${highlight[0].hexValue}`,
-                },
-                dark: {
-                    backgroundColor: `#${highlight[0].hexValue}`,
-                },
-            };
-            const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-            editor.setDecorations(type, [range]);
-        }
+        //  Take the user to their selected highlight
+        this.selectHighlightLocation(selectedHighlight);
+        
         return Promise.resolve(0);
     }
     public async removeHighlight(context: vscode.ExtensionContext): Promise<number> {
@@ -226,17 +203,55 @@ export class Highlighter implements IHighlighter {
                 name: name,
                 color: hexValue,
                 uri: editor.document.uri,
-                selectiaon: editor.selection
+                selection: editor.selection
             }]);
         } else {
             highlights.push({
                 name: name,
                 color: hexValue,
                 uri: editor.document.uri,
-                selectiaon: editor.selection
+                selection: editor.selection
             });
         }
         return Promise.resolve(0);
+    }
+    private showHighlights(highlights: Array<IHighlight>): Promise<IHighlight> {
+
+        // Format selections for user
+        let selections: Array<string> = [];
+        highlights.forEach((h) => {
+            selections.push(`${h.name} - ${h.uri.path}`);
+        });
+
+        // Show selections to user
+        return new Promise((resolve, reject) => {
+            let quickPick: Thenable<string | undefined> = vscode.window.showQuickPick(selections);
+            if (quickPick) {
+
+                // Reduce choice to just the highlight name for highlight match
+                quickPick.then((selection: string | undefined) => {
+                    if (selection) {
+                        let delimiterIndex: number = selection.indexOf('-');
+                        let name: string = selection.slice(0, delimiterIndex).trim();
+                        let highlight: Array<IHighlight> = highlights.filter((h: IHighlight) => { return h.name === name; });
+                        resolve(highlight[0]);
+                    }
+                });
+            }
+        });
+    }
+    private async selectHighlightLocation(selectedHighlight: IHighlight) {
+
+        // Bring selection to view
+        let range: vscode.Range = new vscode.Range(selectedHighlight.selection.start, selectedHighlight.selection.end);
+        var editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, { 
+            selection: range
+        });
+        if (editor) {
+
+            // Decorate presented view
+            this.decorate(editor, selectedHighlight.hexValue, selectedHighlight.selection);
+        }
     }
 }
 export class Subscriber implements ISubscriber {
@@ -255,19 +270,6 @@ export class Subscriber implements ISubscriber {
         return Promise.resolve(0);
     }
     public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
-        /** Update persisted highlight positions if affected by carriage return */
-
-        // Get highlights
-        var highlights:        Array<IHighlight> | undefined = context.globalState.get('highlight-details');
-
-        // List the affected highlights
-        // var shiftedHighlights: Array<IHighlight> | null = highlights ? highlights.map((h: IHighlight)=>{
-        //     if (h.selection.start > event.contentChanges[0].range.start) {
-        //         // TODO SELECTION READ ONLY
-        //         // h.selection.start =  
-        //     }
-        // }) : null;
-
         return Promise.resolve(0);
     }
 }

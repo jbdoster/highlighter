@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
 import { Highlighter, Subscriber } from './classes';
 export function activate(context: vscode.ExtensionContext) {
-	let highlighter: Highlighter;
-	let subscriber: Subscriber;
+
+	// Classes
+	let highlighter: Highlighter = new Highlighter();
+	let subscriber: Subscriber	 = new Subscriber ();
+
+	// Commands for the user
 	let highlightLines = vscode.commands.registerCommand('extension.highlightLines', () => {
 		highlighter.highlightSelection(context);
 	});
