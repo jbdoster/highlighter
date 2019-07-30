@@ -68,7 +68,7 @@ export class Highlighter implements IHighlighter {
 
         //  Take the user to their selected highlight
         let range: vscode.Range = new vscode.Range(selectedHighlight.selection.start, selectedHighlight.selection.end);
-        var editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, { 
+        const editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, { 
             selection: range
         });
 
@@ -101,19 +101,24 @@ export class Highlighter implements IHighlighter {
         context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
 
         // Get active editor and restore lines to original theme color
-        let editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+        const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
         if (editor) {
+            
             // Restore original window line theme color
             const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
-            this.decorate(editor, hexValue, editor.selection);
+            this.decorate(editor, hexValue, selectedHighlight.selection);
         }
 
         return Promise.resolve(0);
     }
     public async removeAllHighlights(context: vscode.ExtensionContext) {
-
+        
         // Get highlights
         let highlights: IHighlight[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+        
+        // Remove saved highlights
+        context.globalState.update(constants.HIGHLIGHTS_KEY, []);
+
 
         // Has highlights?
         if (!highlights) {
@@ -121,16 +126,22 @@ export class Highlighter implements IHighlighter {
             return Promise.resolve(1);
         }
 
-        // Remove and decorate current page
-        let editor: any = vscode.window.activeTextEditor;
-        context.globalState.update('highlight-details', []);
-        highlights.forEach((highlight: IHighlight) => {
-            this.decorate(editor, highlight.hexValue, editor.selection);
-        });
+        // Decorate any highlights on existing page
+        const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
+        if (editor) {
+            const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
+            highlights.forEach((highlight) => {
+                if (highlight.uri === editor.document.uri) {
+                    this.decorate(editor, hexValue, highlight.selection);
+                }
+            });
+        }
         vscode.window.showInformationMessage('All your highlights have been removed');
         return Promise.resolve(0);
     }
     public async decorate(editor: vscode.TextEditor, hexValue: string | vscode.ThemeColor, selection: vscode.Selection): Promise<number> {
+        
+        // string type? ThemeColor type?
         const decorationTypeOptions: vscode.DecorationRenderOptions = {
             isWholeLine: true,
             light: {
