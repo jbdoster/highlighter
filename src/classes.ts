@@ -119,7 +119,6 @@ export class Highlighter implements IHighlighter {
         // Remove saved highlights
         context.globalState.update(constants.HIGHLIGHTS_KEY, []);
 
-
         // Has highlights?
         if (!highlights) {
             vscode.window.showInformationMessage('No highlights to remove');
@@ -267,7 +266,7 @@ export class Subscriber implements ISubscriber {
         /** Populate new view with existing highlights */
         var highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
         if (highlights) {
-            var applyHighlights: Array<IHighlight> = highlights.filter(h => {return h.uri === editor.document.uri;});
+            var applyHighlights: Array<IHighlight> = highlights.filter(h => {return h.uri.fsPath === editor.document.uri.fsPath;});
             applyHighlights.forEach((highlight: IHighlight) => {
                 highlighter.decorate(editor, highlight.hexValue, highlight.selection);
             });
