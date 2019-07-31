@@ -358,7 +358,7 @@ export class Subscriber implements ISubscriber {
         return Promise.resolve();
     }
 }
-class HighlightShiftQueue implements IHighlightShiftQueue {
+class HighlightShiftQueue {
 
     /** Member vars representing an event
      *  where the user enters a carriage return
