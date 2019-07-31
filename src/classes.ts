@@ -274,91 +274,20 @@ export class Subscriber implements ISubscriber {
         }
         return Promise.resolve();
     }
-    public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter): Promise<void> {
+    public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter, queue: HighlightShiftQueue): void {
         
-        // // Result of carriage return?
+        // Result of carriage return?
         if (event.contentChanges[0].text.includes("\n")) {
-
-        //     // Get highlights
-        //     let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-            
-        //     if (highlights) {
-                
-        //         // Any affected highlights?
-        //         let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ 
-
-        //             // Is part of the currently active 
-        //             // file and located in an index 
-        //             // after the new line break?
-        //             return h.selection.start >= event.contentChanges[0].range.start &&
-        //                    h.uri.fsPath === event.document.uri.fsPath;
-        //         });
-
-        //         // Adjust selection positions for affected highlights
-        //         affectedHighlights.map(h=>{
-
-        //             // Assign whole selection property of 
-        //             // IHighlight since vscode.Selection
-        //             // type is read-only
-        //             return h.selection = new vscode.Selection(
-        //                 new vscode.Position(h.selection.start.line + 1, h.selection.start.character), 
-        //                 new vscode.Position(h.selection.end.line   + 1, h.selection.end.character  ) 
-        //             );
-        //         });
-
-        //         // No highlights? Resolve
-        //         if (!highlights) {
-        //             return Promise.resolve();
-        //         }
-                
-        //         // Update existing highlights with affected highlights
-        //         highlights.forEach((h, index)=>{
-        //             if (h.name === affectedHighlights[index].name) {
-        //                 highlights ? highlights[index] = affectedHighlights[index] : console.log();
-        //             }
-        //         });
-
-        //         // Save new highlights
-        //         context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-        //     }
+            queue.enqueue('downward', context, event, highlighter);
         }
-
+        
         // Result of line deleted? 
         if (event.contentChanges[0].text === "") {
-
-            // // Get highlights
-            // let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-                        
-            // if (highlights) {
-                
-            //     // Any affected highlights?
-            //     let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > event.contentChanges[0].range.start;});
-
-            //     // Adjust selection positions
-            //     affectedHighlights.map(h=>{
-            //         h.selection = new vscode.Selection(
-            //             new vscode.Position(h.selection.start.line - 1, h.selection.start.character), 
-            //             new vscode.Position(h.selection.end.line   - 1, h.selection.end.character  ) 
-            //         );
-            //     });
-                
-            //     // Update affected highlights
-            //     highlights.forEach((h, index)=>{
-            //         if (h.name === affectedHighlights[index].name && highlights) {
-            //             highlights[index] = affectedHighlights[index];
-            //         }
-            //     });
-
-            //     // Save new highlights
-            //     context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-            // }
-
+            queue.enqueue('upward', context, event, highlighter);
         }
-        console.log('FINISHED DELETE!!');
-        return Promise.resolve();
     }
 }
-class HighlightShiftQueue {
+export class HighlightShiftQueue {
 
     /** Member vars representing an event
      *  where the user enters a carriage return
@@ -369,6 +298,8 @@ class HighlightShiftQueue {
     private downwardQueue:   Array<IHighlightQueueInput> = [];
     private upwardIsEmpty:   boolean                     = true;
     private downwardIsEmpty: boolean                     = true;
+    private upwardId:        number                      = 0;
+    private downwardId:      number                      = 0;
 
     constructor() {
 
@@ -392,15 +323,20 @@ class HighlightShiftQueue {
                 this.upwardQueue.push({
                     context:     context,
                     event:       event,
-                    highlighter: highlighter
+                    highlighter: highlighter,
+                    id:          this.upwardId
                 });
+                this.upwardId += 1;
                 break;
+
             case 'downwardShifts':
                 this.downwardQueue.push({
                     context:     context,
                     event:       event,
-                    highlighter: highlighter
+                    highlighter: highlighter,
+                    id:          this.downwardId
                 });
+                this.downwardId += 1;
                 break;
         }
     }
@@ -434,6 +370,9 @@ class HighlightShiftQueue {
 
             // Save new highlights
             queueItem.context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+            
+            // Track
+            console.warn(`Dequeued upward ID ${queueItem.id}`);
         }
     }
     private async _dequeueDownward() {
@@ -485,6 +424,9 @@ class HighlightShiftQueue {
 
                 // Save new highlights
                 queueItem.context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+
+                // Track
+                console.warn(`Dequeued downward ID ${queueItem.id}`);
             }
         }
     }

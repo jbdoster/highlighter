@@ -1,4 +1,4 @@
-import { Highlighter } from './classes';
+import { Highlighter, HighlightShiftQueue } from './classes';
 import * as vscode from 'vscode';
 export interface IHighlighter {
     highlightSelection (context:   vscode.ExtensionContext): Promise<number>;
@@ -21,7 +21,8 @@ export interface IHighlight {
 export interface ISubscriber {
     onTextDocumentChangedHandler  (context: vscode.ExtensionContext,  
                                    event:  vscode.TextDocumentChangeEvent, 
-                                   highlighter: Highlighter): Promise<void>;
+                                   highlighter: Highlighter,
+                                   queue:       HighlightShiftQueue): void;
     onActiveEditorDidChangeHandler(context: vscode.ExtensionContext,  
                                    editor: vscode.TextEditor,             
                                    highlighter: Highlighter): Promise<void>;
@@ -30,6 +31,7 @@ export interface IHighlightQueueInput {
     context:     vscode.ExtensionContext; 
     event:       vscode.TextDocumentChangeEvent;
     highlighter: Highlighter;
+    id:          number;
 }
 // export interface IHighlightShiftQueue {
 //     upwardQueue:         Array<IHighlightQueueInput>;

@@ -1,10 +1,11 @@
 import * as vscode from 'vscode';
-import { Highlighter, Subscriber } from './classes';
+import { Highlighter, HighlightShiftQueue, Subscriber } from './classes';
 export function activate(context: vscode.ExtensionContext) {
 
 	// Classes
-	let highlighter: Highlighter = new Highlighter();
-	let subscriber: Subscriber	 = new Subscriber ();
+	let highlighter: Highlighter 		 = new Highlighter();
+	let queue: 		 HighlightShiftQueue = new HighlightShiftQueue();
+	let subscriber:  Subscriber	 		 = new Subscriber ();
 
 	// Commands for the user
 	let highlightLines = vscode.commands.registerCommand('extension.highlightLines', () => {
@@ -25,7 +26,7 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 	vscode.workspace.onDidChangeTextDocument((event: vscode.TextDocumentChangeEvent) => {
 		/** User made changes in active text file */
-		subscriber.onTextDocumentChangedHandler(context, event, highlighter);
+		subscriber.onTextDocumentChangedHandler(context, event, highlighter, queue);
 	});
 	context.subscriptions.push( 
 								highlightLines, 
