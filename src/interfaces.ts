@@ -22,3 +22,8 @@ export interface ISubscriber {
     onTextDocumentChangedHandler  (context: vscode.ExtensionContext,  event: vscode.TextDocumentChangeEvent, highlighter: Highlighter): Promise<void>;
     onActiveEditorDidChangeHandler(context: vscode.ExtensionContext,  editor: vscode.TextEditor,             highlighter: Highlighter): Promise<void>;
 }
+export interface IHighlightQueueInput {
+    context: vscode.ExtensionContext; 
+    event: vscode.TextDocumentChangeEvent;
+    highlighter: Highlighter;
+}

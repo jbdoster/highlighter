@@ -1,9 +1,10 @@
-import { IHighlighter, IHighlight, ISubscriber } from './interfaces';
+import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput } from './interfaces';
 import * as vscode from 'vscode';
 import * as constants from './constants';
 import * as fs from 'fs';
 import * as path from 'path';
-import { rejects } from 'assert';
+import { rejects, doesNotThrow } from 'assert';
+import { PassThrough } from 'stream';
 
 export class Highlighter implements IHighlighter {
     
@@ -150,8 +151,13 @@ export class Highlighter implements IHighlighter {
                 backgroundColor: `#${hexValue}`,
             },
         };
-        const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-        editor.setDecorations(type, [new vscode.Range(selection.start, selection.end)]);
+        const type: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
+        editor.setDecorations(type, [
+            new vscode.Selection(
+                new vscode.Position(selection.start.line, selection.start.character), 
+                new vscode.Position(selection.end.line,   selection.end.character  ) 
+            )
+        ]);
         return Promise.resolve(0);
     }
     /** PRIVATE */
@@ -254,11 +260,6 @@ export class Highlighter implements IHighlighter {
             }
         });
     }
-    private async selectHighlightLocation(selectedHighlight: IHighlight) {
-
-        // Bring selection to view
-        
-    }
 }
 export class Subscriber implements ISubscriber {
     public async onActiveEditorDidChangeHandler(context: vscode.ExtensionContext, editor: vscode.TextEditor, highlighter: Highlighter): Promise<void> {
@@ -275,68 +276,209 @@ export class Subscriber implements ISubscriber {
     }
     public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter): Promise<void> {
         
-        // Result of carriage return?
+        // // Result of carriage return?
         if (event.contentChanges[0].text.includes("\n")) {
 
-            // Get highlights
-            let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+        //     // Get highlights
+        //     let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
             
-            if (highlights) {
+        //     if (highlights) {
                 
-                // Any affected highlights?
-                let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > event.contentChanges[0].range.start;});
+        //         // Any affected highlights?
+        //         let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ 
 
-                // Adjust selection positions
-                affectedHighlights.map(h=>{
-                    h.selection = new vscode.Selection(
-                        new vscode.Position(h.selection.start.line + 1, h.selection.start.character), 
-                        new vscode.Position(h.selection.end.line   + 1, h.selection.end.character  ) 
-                    );
-                });
+        //             // Is part of the currently active 
+        //             // file and located in an index 
+        //             // after the new line break?
+        //             return h.selection.start >= event.contentChanges[0].range.start &&
+        //                    h.uri.fsPath === event.document.uri.fsPath;
+        //         });
+
+        //         // Adjust selection positions for affected highlights
+        //         affectedHighlights.map(h=>{
+
+        //             // Assign whole selection property of 
+        //             // IHighlight since vscode.Selection
+        //             // type is read-only
+        //             return h.selection = new vscode.Selection(
+        //                 new vscode.Position(h.selection.start.line + 1, h.selection.start.character), 
+        //                 new vscode.Position(h.selection.end.line   + 1, h.selection.end.character  ) 
+        //             );
+        //         });
+
+        //         // No highlights? Resolve
+        //         if (!highlights) {
+        //             return Promise.resolve();
+        //         }
                 
-                // Update affected highlights
-                highlights.forEach((h, index)=>{
-                    if (h.name === affectedHighlights[index].name && highlights) {
-                        highlights[index] = affectedHighlights[index];
-                    }
-                });
+        //         // Update existing highlights with affected highlights
+        //         highlights.forEach((h, index)=>{
+        //             if (h.name === affectedHighlights[index].name) {
+        //                 highlights ? highlights[index] = affectedHighlights[index] : console.log();
+        //             }
+        //         });
 
-                // Save new highlights
-                context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-            }
+        //         // Save new highlights
+        //         context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+        //     }
         }
 
         // Result of line deleted? 
         if (event.contentChanges[0].text === "") {
 
-            // Get highlights
-            let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+            // // Get highlights
+            // let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
                         
+            // if (highlights) {
+                
+            //     // Any affected highlights?
+            //     let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > event.contentChanges[0].range.start;});
+
+            //     // Adjust selection positions
+            //     affectedHighlights.map(h=>{
+            //         h.selection = new vscode.Selection(
+            //             new vscode.Position(h.selection.start.line - 1, h.selection.start.character), 
+            //             new vscode.Position(h.selection.end.line   - 1, h.selection.end.character  ) 
+            //         );
+            //     });
+                
+            //     // Update affected highlights
+            //     highlights.forEach((h, index)=>{
+            //         if (h.name === affectedHighlights[index].name && highlights) {
+            //             highlights[index] = affectedHighlights[index];
+            //         }
+            //     });
+
+            //     // Save new highlights
+            //     context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+            // }
+
+        }
+        console.log('FINISHED DELETE!!');
+        return Promise.resolve();
+    }
+}
+class TextDocumentLineShiftQueue {
+
+    /** Member vars representing an event
+     *  where the user enters a carriage return
+     *  or deletes a lines which affects existing 
+     *  highlights
+     */
+    private upwardQueue:     Array<IHighlightQueueInput> = [];
+    private downwardQueue:   Array<IHighlightQueueInput> = [];
+    private upwardIsEmpty:   boolean                     = true;
+    private downwardIsEmpty: boolean                     = true;
+    
+    constructor() {
+        while (!this.upwardIsEmpty) {
+            this._dequeueUpward  ();
+        }
+        while (!this.downwardIsEmpty) {
+            this._dequeueDownward();
+        }
+    }
+
+    public enqueue(queue: string, context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
+        switch (queue) {
+            case 'upwardShifts':
+                this.upwardQueue.push({
+                    context:     context,
+                    event:       event,
+                    highlighter: highlighter
+                });
+                break;
+            case 'downwardShifts':
+                this.downwardQueue.push({
+                    context:     context,
+                    event:       event,
+                    highlighter: highlighter
+                });
+                break;
+        }
+    }
+    private async _dequeueUpward() {
+
+        //  FIFO
+        let queueItem: IHighlightQueueInput = this.upwardQueue[0];
+
+        // Get highlights
+        let highlights: Array<IHighlight> | undefined = queueItem.context.globalState.get(constants.HIGHLIGHTS_KEY);
+                    
+        if (highlights) {
+            
+            // Any affected highlights?
+            let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > queueItem.event.contentChanges[0].range.start;});
+
+            // Adjust selection positions
+            affectedHighlights.map(h=>{
+                h.selection = new vscode.Selection(
+                    new vscode.Position(h.selection.start.line - 1, h.selection.start.character), 
+                    new vscode.Position(h.selection.end.line   - 1, h.selection.end.character  ) 
+                );
+            });
+            
+            // Update affected highlights
+            highlights.forEach((h, index)=>{
+                if (h.name === affectedHighlights[index].name && highlights) {
+                    highlights[index] = affectedHighlights[index];
+                }
+            });
+
+            // Save new highlights
+            queueItem.context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+        }
+    }
+    private async _dequeueDownward() {
+
+        //  FIFO
+        let queueItem: IHighlightQueueInput = this.downwardQueue[0];
+
+        // Result of carriage return?
+        if (queueItem.event.contentChanges[0].text.includes("\n")) {
+
+            // Get highlights
+            let highlights: Array<IHighlight> | undefined = queueItem.context.globalState.get(constants.HIGHLIGHTS_KEY);
+            
             if (highlights) {
                 
                 // Any affected highlights?
-                let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > event.contentChanges[0].range.start;});
+                let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ 
 
-                // Adjust selection positions
+                    // Is part of the currently active 
+                    // file and located in an index 
+                    // after the new line break?
+                    return h.selection.start >= queueItem.event.contentChanges[0].range.start &&
+                        h.uri.fsPath === queueItem.event.document.uri.fsPath;
+                });
+
+                // Adjust selection positions for affected highlights
                 affectedHighlights.map(h=>{
-                    h.selection = new vscode.Selection(
-                        new vscode.Position(h.selection.start.line - 1, h.selection.start.character), 
-                        new vscode.Position(h.selection.end.line   - 1, h.selection.end.character  ) 
+
+                    // Assign whole selection property of 
+                    // IHighlight since vscode.Selection
+                    // type is read-only
+                    return h.selection = new vscode.Selection(
+                        new vscode.Position(h.selection.start.line + 1, h.selection.start.character), 
+                        new vscode.Position(h.selection.end.line   + 1, h.selection.end.character  ) 
                     );
                 });
+
+                // No highlights? Resolve
+                if (!highlights) {
+                    return Promise.resolve();
+                }
                 
-                // Update affected highlights
+                // Update existing highlights with affected highlights
                 highlights.forEach((h, index)=>{
-                    if (h.name === affectedHighlights[index].name && highlights) {
-                        highlights[index] = affectedHighlights[index];
+                    if (h.name === affectedHighlights[index].name) {
+                        highlights ? highlights[index] = affectedHighlights[index] : console.log();
                     }
                 });
 
                 // Save new highlights
-                context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+                queueItem.context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
             }
-
         }
-        return Promise.resolve();
     }
 }
