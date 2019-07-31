@@ -1,4 +1,4 @@
-import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput, IHighlightShiftQueue } from './interfaces';
+import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput } from './interfaces';
 import * as vscode from 'vscode';
 import * as constants from './constants';
 import * as fs from 'fs';
