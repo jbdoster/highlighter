@@ -1,4 +1,4 @@
-import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput } from './interfaces';
+import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput, IHighlightShiftQueue } from './interfaces';
 import * as vscode from 'vscode';
 import * as constants from './constants';
 import * as fs from 'fs';
@@ -358,7 +358,7 @@ export class Subscriber implements ISubscriber {
         return Promise.resolve();
     }
 }
-class TextDocumentLineShiftQueue {
+class HighlightShiftQueue implements IHighlightShiftQueue {
 
     /** Member vars representing an event
      *  where the user enters a carriage return
@@ -369,8 +369,13 @@ class TextDocumentLineShiftQueue {
     private downwardQueue:   Array<IHighlightQueueInput> = [];
     private upwardIsEmpty:   boolean                     = true;
     private downwardIsEmpty: boolean                     = true;
-    
+
     constructor() {
+
+        // Keep queue alive
+        setInterval(()=>{},10000);
+
+        // Dequeue if !empty
         while (!this.upwardIsEmpty) {
             this._dequeueUpward  ();
         }
@@ -379,8 +384,10 @@ class TextDocumentLineShiftQueue {
         }
     }
 
-    public enqueue(queue: string, context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter) {
-        switch (queue) {
+    public enqueue(queueType: string, context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter): void {
+        
+        // Async (NO await!!) to pass to static event loop provided by the VM
+        switch (queueType) {
             case 'upwardShifts':
                 this.upwardQueue.push({
                     context:     context,
