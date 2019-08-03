@@ -19,19 +19,22 @@ export interface IHighlight {
         uri:       vscode.Uri;
 }
 export interface ISubscriber {
-    onTextDocumentChangedHandler  (context: vscode.ExtensionContext,  
-                                   event:  vscode.TextDocumentChangeEvent, 
-                                   highlighter: Highlighter,
-                                   queue:       HighlightShiftQueue): void;
-    onActiveEditorDidChangeHandler(context: vscode.ExtensionContext,  
-                                   editor: vscode.TextEditor,             
+    // onTextDocumentChangedHandler  (context:     vscode.ExtensionContext,  
+    //                                event:       vscode.TextDocumentChangeEvent, 
+    //                                highlighter: Highlighter,
+    //                                queue:       HighlightShiftQueue): void;
+    onActiveEditorDidChangeHandler(context:     vscode.ExtensionContext,  
+                                   editor:      vscode.TextEditor,             
                                    highlighter: Highlighter): Promise<void>;
 }
-export interface IHighlightQueueInput {
-    context:     vscode.ExtensionContext; 
+export interface IHighlightQueueInput { 
     event:       vscode.TextDocumentChangeEvent;
     highlighter: Highlighter;
-    id:          number;
+    type:        string;
+}
+export interface IUpdateHighlight {
+    appliedHighlight: string;
+    updatedSelection: vscode.Selection;
 }
 // export interface IHighlightShiftQueue {
 //     upwardQueue:         Array<IHighlightQueueInput>;

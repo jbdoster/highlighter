@@ -1,33 +1,44 @@
-import * as vscode from 'vscode';
-import { Highlighter, HighlightShiftQueue, Subscriber } from './classes';
+import 	{   
+	Highlighter, 
+	Subscriber, 
+	HighlightPositionShift
+} 					  from './classes';
+import * as constants from './constants';
+import * as vscode    from 'vscode';
+
 export function activate(context: vscode.ExtensionContext) {
 
-	// Classes
-	let highlighter: Highlighter 		 = new Highlighter();
-	let queue: 		 HighlightShiftQueue = new HighlightShiftQueue();
-	let subscriber:  Subscriber	 		 = new Subscriber ();
+	/** CLASSES */
+	let highlighter: Highlighter 		 	= new Highlighter();
+	let shifter: 	 HighlightPositionShift = new HighlightPositionShift();
+	let subscriber:  Subscriber	 		 	= new Subscriber ();
 
-	// Commands for the user
-	let highlightLines = vscode.commands.registerCommand('extension.highlightLines', () => {
+	/** USER COMMANDS */
+	let highlightLines = vscode.commands.registerCommand(constants.COMMAND_HIGHLIGHT, 		() => {
 		highlighter.highlightSelection(context);
 	});
-	let findHighlight = vscode.commands.registerCommand('extension.findHighlight', () => {
+	let findHighlight = vscode.commands.registerCommand(constants.COMMAND_FIND, 			() => {
 		highlighter.findHighlight(context);
 	});
-	let removeHighlight = vscode.commands.registerCommand('extension.removeHighlight', () => {
+	let removeHighlight = vscode.commands.registerCommand(constants.COMMAND_REMOVE, 		() => {
 		highlighter.removeHighlight(context);
 	});
-	let removeAllHighlights = vscode.commands.registerCommand('extension.removeAllHighlights', () => {
+	let removeAllHighlights = vscode.commands.registerCommand(constants.COMMAND_REMOVE_ALL, () => {
 		highlighter.removeAllHighlights(context);
 	});
+
+	/** EVENT LISTENERS */
 	vscode.window.onDidChangeActiveTextEditor((editor: vscode.TextEditor | undefined) => {
-		/** User changed active text file */
 		editor ? subscriber.onActiveEditorDidChangeHandler(context, editor, highlighter) : console.log('No changes');
 	});
 	vscode.workspace.onDidChangeTextDocument((event: vscode.TextDocumentChangeEvent) => {
-		/** User made changes in active text file */
-		subscriber.onTextDocumentChangedHandler(context, event, highlighter, queue);
+		shifter.set(context, event);
 	});
+	vscode.workspace.onDidSaveTextDocument(() => {
+		shifter.dispatch(context);
+	});
+
+	/** EXTENSION EXPORTS */
 	context.subscriptions.push( 
 								highlightLines, 
 								findHighlight, 

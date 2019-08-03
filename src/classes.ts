@@ -1,13 +1,12 @@
-import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput } from './interfaces';
+import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput, IUpdateHighlight } from './interfaces';
 import * as vscode from 'vscode';
 import * as constants from './constants';
 import * as fs from 'fs';
 import * as path from 'path';
-import { rejects, doesNotThrow } from 'assert';
-import { PassThrough } from 'stream';
+import { addListener } from 'cluster';
 
 export class Highlighter implements IHighlighter {
-    
+
     /** PUBLIC */
     public async highlightSelection(context: vscode.ExtensionContext): Promise<number> {
 
@@ -21,18 +20,17 @@ export class Highlighter implements IHighlighter {
             return Promise.resolve(1);
         }
 
-        
         // Wait for user to enter value
         let name: string = await this.acquireHighlightName();
-        
+
         // Get highlights
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
 
         if (highlights) {
 
             //  Pull list of existing matching names
-            let existingMatches: Array<any> = highlights.filter(h => {return h.name === name; });
-            
+            let existingMatches: Array<any> = highlights.filter(h => { return h.name === name; });
+
             // Exists? Reproduce try again
             if (existingMatches.length > 0) {
                 vscode.window.showInformationMessage(`Highlight '${name}' already exists, please choose a different name`);
@@ -53,7 +51,7 @@ export class Highlighter implements IHighlighter {
 
         // Get highlights
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-        
+
         // Has highlights?
         if (!highlights) {
             vscode.window.showInformationMessage('You do not have any saved highlights');
@@ -69,7 +67,7 @@ export class Highlighter implements IHighlighter {
 
         //  Take the user to their selected highlight
         let range: vscode.Range = new vscode.Range(selectedHighlight.selection.start, selectedHighlight.selection.end);
-        const editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, { 
+        const editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, {
             selection: range
         });
 
@@ -81,7 +79,7 @@ export class Highlighter implements IHighlighter {
 
         // Get highlights
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-        
+
         // Has highlights?
         if (!highlights || highlights.length < 1) {
             vscode.window.showInformationMessage('You do not have any saved highlights');
@@ -104,7 +102,7 @@ export class Highlighter implements IHighlighter {
         // Get active editor and restore lines to original theme color
         const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
         if (editor) {
-            
+
             // Restore original window line theme color
             const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
             this.decorate(editor, hexValue, selectedHighlight.selection);
@@ -113,10 +111,10 @@ export class Highlighter implements IHighlighter {
         return Promise.resolve(0);
     }
     public async removeAllHighlights(context: vscode.ExtensionContext) {
-        
+
         // Get highlights
         let highlights: IHighlight[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-        
+
         // Remove saved highlights
         context.globalState.update(constants.HIGHLIGHTS_KEY, []);
 
@@ -140,7 +138,7 @@ export class Highlighter implements IHighlighter {
         return Promise.resolve(0);
     }
     public async decorate(editor: vscode.TextEditor, hexValue: string | vscode.ThemeColor, selection: vscode.Selection): Promise<number> {
-        
+
         // string type? ThemeColor type?
         const decorationTypeOptions: vscode.DecorationRenderOptions = {
             isWholeLine: true,
@@ -154,8 +152,8 @@ export class Highlighter implements IHighlighter {
         const type: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
         editor.setDecorations(type, [
             new vscode.Selection(
-                new vscode.Position(selection.start.line, selection.start.character), 
-                new vscode.Position(selection.end.line,   selection.end.character  ) 
+                new vscode.Position(selection.start.line, selection.start.character),
+                new vscode.Position(selection.end.line, selection.end.character)
             )
         ]);
         return Promise.resolve(0);
@@ -212,7 +210,7 @@ export class Highlighter implements IHighlighter {
             });
         });
     }
-    private saveHighlight(context: vscode.ExtensionContext, editor: vscode.TextEditor, hexValue: string, name: string): Promise<number> {
+    private async saveHighlight(context: vscode.ExtensionContext, editor: vscode.TextEditor, hexValue: string, name: string): Promise<number> {
 
         // Get highlights
         let highlights: object[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
@@ -235,7 +233,7 @@ export class Highlighter implements IHighlighter {
         }
         return Promise.resolve(0);
     }
-    private showHighlights(highlights: Array<IHighlight>): Promise<IHighlight> {
+    private async showHighlights(highlights: Array<IHighlight>): Promise<IHighlight> {
 
         // Format selections for user
         let selections: Array<string> = [];
@@ -263,171 +261,143 @@ export class Highlighter implements IHighlighter {
 }
 export class Subscriber implements ISubscriber {
     public async onActiveEditorDidChangeHandler(context: vscode.ExtensionContext, editor: vscode.TextEditor, highlighter: Highlighter): Promise<void> {
- 
+
         /** Populate new view with existing highlights */
         var highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
         if (highlights) {
-            var applyHighlights: Array<IHighlight> = highlights.filter(h => {return h.uri.fsPath === editor.document.uri.fsPath;});
+            var applyHighlights: Array<IHighlight> = highlights.filter(h => { return h.uri.fsPath === editor.document.uri.fsPath; });
             applyHighlights.forEach((highlight: IHighlight) => {
                 highlighter.decorate(editor, highlight.hexValue, highlight.selection);
             });
         }
         return Promise.resolve();
     }
-    public onTextDocumentChangedHandler(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter, queue: HighlightShiftQueue): void {
-        
-        // Result of carriage return?
-        if (event.contentChanges[0].text.includes("\n")) {
-            queue.enqueue('downward', context, event, highlighter);
-        }
-        
-        // Result of line deleted? 
-        if (event.contentChanges[0].text === "") {
-            queue.enqueue('upward', context, event, highlighter);
-        }
-    }
 }
-export class HighlightShiftQueue {
 
-    /** Member vars representing an event
-     *  where the user enters a carriage return
-     *  or deletes a lines which affects existing 
-     *  highlights
+export class HighlightPositionShift {
+
+    /**
+     *  Array that the changes of a single, unique highlight
+     *  that's position is shifted as the result of the user
+     *  adding or removing lines in a text document 
      */
-    private upwardQueue:     Array<IHighlightQueueInput> = [];
-    private downwardQueue:   Array<IHighlightQueueInput> = [];
-    private upwardIsEmpty:   boolean                     = true;
-    private downwardIsEmpty: boolean                     = true;
-    private upwardId:        number                      = 0;
-    private downwardId:      number                      = 0;
+    private highlightsToMerge: Array<IHighlight> = [];
 
-    constructor() {
+    public async set(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
+        switch (event.contentChanges[0].text) {
 
-        // Keep queue alive
-        setInterval(()=>{},10000);
-
-        // Dequeue if !empty
-        while (!this.upwardIsEmpty) {
-            this._dequeueUpward  ();
-        }
-        while (!this.downwardIsEmpty) {
-            this._dequeueDownward();
-        }
-    }
-
-    public enqueue(queueType: string, context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, highlighter: Highlighter): void {
-        
-        // Async (NO await!!) to pass to static event loop provided by the VM
-        switch (queueType) {
-            case 'upwardShifts':
-                this.upwardQueue.push({
-                    context:     context,
-                    event:       event,
-                    highlighter: highlighter,
-                    id:          this.upwardId
-                });
-                this.upwardId += 1;
+            // Delete? Subtract
+            case "":
+                this.shift(context, event, 'subtract');
                 break;
 
-            case 'downwardShifts':
-                this.downwardQueue.push({
-                    context:     context,
-                    event:       event,
-                    highlighter: highlighter,
-                    id:          this.downwardId
-                });
-                this.downwardId += 1;
+            // Carriage return? Add
+            case "\n":
+                this.shift(context, event, 'add');
                 break;
+
+            default:
+                throw new Error(`Selection change did not catch character: ${event.contentChanges[0].text}`);
         }
     }
-    private async _dequeueUpward() {
-
-        //  FIFO
-        let queueItem: IHighlightQueueInput = this.upwardQueue[0];
+    private async shift(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, op: string): Promise<void> {
 
         // Get highlights
-        let highlights: Array<IHighlight> | undefined = queueItem.context.globalState.get(constants.HIGHLIGHTS_KEY);
-                    
-        if (highlights) {
-            
-            // Any affected highlights?
-            let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ return h.selection.start > queueItem.event.contentChanges[0].range.start;});
+        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
 
-            // Adjust selection positions
-            affectedHighlights.map(h=>{
-                h.selection = new vscode.Selection(
-                    new vscode.Position(h.selection.start.line - 1, h.selection.start.character), 
-                    new vscode.Position(h.selection.end.line   - 1, h.selection.end.character  ) 
-                );
-            });
-            
-            // Update affected highlights
-            highlights.forEach((h, index)=>{
-                if (h.name === affectedHighlights[index].name && highlights) {
-                    highlights[index] = affectedHighlights[index];
-                }
-            });
-
-            // Save new highlights
-            queueItem.context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-            
-            // Track
-            console.warn(`Dequeued upward ID ${queueItem.id}`);
+        // User saved highlights?
+        if (!highlights) {
+            return Promise.resolve();
         }
-    }
-    private async _dequeueDownward() {
 
-        //  FIFO
-        let queueItem: IHighlightQueueInput = this.downwardQueue[0];
+        // Highlights that are in the same file and affected
+        let affectedHighlights: Array<IHighlight> = highlights.filter(h => {
+            return event.document.uri.fsPath === h.uri.fsPath &&
+                event.contentChanges[0].range.start < h.selection.start;
+        });
 
-        // Result of carriage return?
-        if (queueItem.event.contentChanges[0].text.includes("\n")) {
+        // Map new selection positions to affect highlights
+        affectedHighlights.map((affectedHighlight: IHighlight) => {
 
-            // Get highlights
-            let highlights: Array<IHighlight> | undefined = queueItem.context.globalState.get(constants.HIGHLIGHTS_KEY);
-            
-            if (highlights) {
-                
-                // Any affected highlights?
-                let affectedHighlights: Array<IHighlight> = highlights.filter(h=>{ 
+            switch (op) {
+                case 'add':
+                    affectedHighlight.selection = new vscode.Selection(
 
-                    // Is part of the currently active 
-                    // file and located in an index 
-                    // after the new line break?
-                    return h.selection.start >= queueItem.event.contentChanges[0].range.start &&
-                        h.uri.fsPath === queueItem.event.document.uri.fsPath;
-                });
+                        // New start
+                        new vscode.Position(
+                            affectedHighlight.selection.start.line +
+                            event.contentChanges[0].range.start.line,
+                            event.contentChanges[0].range.start.character
+                        ),
 
-                // Adjust selection positions for affected highlights
-                affectedHighlights.map(h=>{
+                        // New end
+                        new vscode.Position(
+                            affectedHighlight.selection.end.line +
+                            event.contentChanges[0].range.end.line,
+                            event.contentChanges[0].range.end.character
+                        ));
 
-                    // Assign whole selection property of 
-                    // IHighlight since vscode.Selection
-                    // type is read-only
-                    return h.selection = new vscode.Selection(
-                        new vscode.Position(h.selection.start.line + 1, h.selection.start.character), 
-                        new vscode.Position(h.selection.end.line   + 1, h.selection.end.character  ) 
-                    );
-                });
+                    break;
 
-                // No highlights? Resolve
-                if (!highlights) {
-                    return Promise.resolve();
-                }
-                
-                // Update existing highlights with affected highlights
-                highlights.forEach((h, index)=>{
-                    if (h.name === affectedHighlights[index].name) {
-                        highlights ? highlights[index] = affectedHighlights[index] : console.log();
-                    }
-                });
+                case 'subtract':
+                    affectedHighlight.selection = new vscode.Selection(
 
-                // Save new highlights
-                queueItem.context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+                        // New start
+                        new vscode.Position(
+                            affectedHighlight.selection.start.line -
+                            event.contentChanges[0].range.start.line,
+                            event.contentChanges[0].range.start.character
+                        ),
 
-                // Track
-                console.warn(`Dequeued downward ID ${queueItem.id}`);
+                        // New end
+                        new vscode.Position(
+                            affectedHighlight.selection.end.line -
+                            event.contentChanges[0].range.end.line,
+                            event.contentChanges[0].range.end.character
+                        ));
+
+                    break;
+
+                default:
+                    throw new Error('Only add and subtract are valid operations');
             }
+        });
+
+        // Merge new highlights to member highlightsToMerge: Array<IHighlight>
+        this.highlightsToMerge.forEach((highlightToMerge, index) => {
+            affectedHighlights.forEach((affectedHighlight) => {
+
+                //  Match? 
+                if (highlightToMerge.name === affectedHighlight.name) {
+
+                    // Merge new highlight with new selection positions
+                    this.highlightsToMerge[index] = affectedHighlight;
+                }
+            });
+        });
+
+        return Promise.resolve();
+    }
+    public async dispatch(context: vscode.ExtensionContext) {
+
+        //  Get highlights and merge
+        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
+
+        // User has highlights?
+        if (!highlights) {
+            return Promise.resolve();
         }
+
+        // Merge updated highlights to workspace
+        highlights.forEach((highlight, index) => {
+            this.highlightsToMerge.forEach((highlightToMerge: IHighlight) => {
+                if (highlight.name === highlightToMerge.name) {
+                    highlights ? highlights[index] = highlightToMerge : console.log('');
+                }
+            });
+        });
+
+        // Save new highlights
+        context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
     }
 }
