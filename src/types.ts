@@ -6,8 +6,7 @@ export type IHighlight  = {
         selection: vscode.Selection;
         uri:       vscode.Uri;
 };
-// export type IHighlightQueueInput = { 
-//     event:       vscode.TextDocumentChangeEvent;
-//     highlighter: Highlighter;
-//     type:        string;
-// };
+export type IUpdateHighlight  = {
+        appliedHighlight: string;
+        updatedSelection: vscode.Selection;
+};

@@ -15,12 +15,7 @@ export interface ISubscriber {
                                    editor:      vscode.TextEditor,             
                                    highlighter: Highlighter): Promise<void>;
 }
-// export interface IHighlightQueueInput { 
-//     event:       vscode.TextDocumentChangeEvent;
-//     highlighter: Highlighter;
-//     type:        string;
+// export interface IUpdateHighlight {
+//     appliedHighlight: string;
+//     updatedSelection: vscode.Selection;
 // }
-export interface IUpdateHighlight {
-    appliedHighlight: string;
-    updatedSelection: vscode.Selection;
-}

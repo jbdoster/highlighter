@@ -282,6 +282,11 @@ export class HighlightPositionShift {
     private highlightsToMerge: Array<IHighlight> = [];
 
     public async set(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
+        /** Temporarily saves to memory any necessary shifts in number of lines
+         *  that affect currently existing highlights. This temporary store is dumped
+         *  when the user saves the file with a matching fsPath to any highlight
+         *  that has been shifted.
+         */
         switch (event.contentChanges[0].text) {
 
             // Delete? Subtract
@@ -299,6 +304,9 @@ export class HighlightPositionShift {
         }
     }
     private async shift(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, op: string): Promise<void> {
+        /** Happens when a user adds or deletes lines 
+         *  at any index located before any highlight(s)
+         */
 
         // Get highlights
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
@@ -387,7 +395,13 @@ export class HighlightPositionShift {
         
         return Promise.resolve();
     }
-    public async dispatch(context: vscode.ExtensionContext) {
+    private async reduce() {
+        /** Happens when the user deletes lines involving highlights */
+    }
+    public async dispatchChanges(context: vscode.ExtensionContext) {
+        /** Persist the tracked shifts in highlights saved to the workspace
+         *  cache and dump the member Array.
+         */
 
         //  Get highlights and merge
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);

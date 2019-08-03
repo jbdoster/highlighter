@@ -36,7 +36,7 @@ export function activate(context: vscode.ExtensionContext) {
 		shifter.set(context, event);
 	});
 	vscode.workspace.onDidSaveTextDocument(() => {
-		shifter.dispatch(context);
+		shifter.dispatchChanges(context);
 	});
 
 	/** EXTENSION EXPORTS */
