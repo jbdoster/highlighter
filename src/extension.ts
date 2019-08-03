@@ -5,6 +5,7 @@ import 	{
 } 					  from './classes';
 import * as constants from './constants';
 import * as vscode    from 'vscode';
+import { IHighlight } from './types';
 
 export function activate(context: vscode.ExtensionContext) {
 

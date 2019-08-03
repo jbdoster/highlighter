@@ -1,9 +1,9 @@
-import { IHighlighter, IHighlight, ISubscriber, IHighlightQueueInput, IUpdateHighlight } from './interfaces';
+import { IHighlighter, ISubscriber } from './interfaces';
 import * as vscode from 'vscode';
 import * as constants from './constants';
 import * as fs from 'fs';
 import * as path from 'path';
-import { addListener } from 'cluster';
+import { IHighlight } from './types';
 
 export class Highlighter implements IHighlighter {
 
@@ -216,21 +216,19 @@ export class Highlighter implements IHighlighter {
         let highlights: object[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
 
         // Has highlight?
-        if (!highlights) {
-            context.globalState.update(constants.HIGHLIGHTS_KEY, [{
-                name: name,
-                hexValue: hexValue,
-                uri: editor.document.uri,
-                selection: editor.selection
-            }]);
-        } else {
+        if (highlights) {
             highlights.push({
                 name: name,
                 hexValue: hexValue,
                 uri: editor.document.uri,
                 selection: editor.selection
             });
+            context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+
+        } else {
+            throw new Error('Could not save highlight');
         }
+
         return Promise.resolve(0);
     }
     private async showHighlights(highlights: Array<IHighlight>): Promise<IHighlight> {
@@ -305,7 +303,7 @@ export class HighlightPositionShift {
         // Get highlights
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
 
-        // User saved highlights?
+        // No saved highlights by user?
         if (!highlights) {
             return Promise.resolve();
         }
@@ -313,8 +311,13 @@ export class HighlightPositionShift {
         // Highlights that are in the same file and affected
         let affectedHighlights: Array<IHighlight> = highlights.filter(h => {
             return event.document.uri.fsPath === h.uri.fsPath &&
-                event.contentChanges[0].range.start < h.selection.start;
+                event.contentChanges[0].range.start.line < h.selection.start.line;
         });
+
+        // No affected highlights to shift?
+        if (!affectedHighlights) {
+            return Promise.resolve();
+        }
 
         // Map new selection positions to affect highlights
         affectedHighlights.map((affectedHighlight: IHighlight) => {
@@ -326,14 +329,14 @@ export class HighlightPositionShift {
                         // New start
                         new vscode.Position(
                             affectedHighlight.selection.start.line +
-                            event.contentChanges[0].range.start.line,
+                            event.contentChanges[0].rangeLength,
                             event.contentChanges[0].range.start.character
                         ),
 
                         // New end
                         new vscode.Position(
                             affectedHighlight.selection.end.line +
-                            event.contentChanges[0].range.end.line,
+                            event.contentChanges[0].rangeLength,
                             event.contentChanges[0].range.end.character
                         ));
 
@@ -345,14 +348,14 @@ export class HighlightPositionShift {
                         // New start
                         new vscode.Position(
                             affectedHighlight.selection.start.line -
-                            event.contentChanges[0].range.start.line,
+                            event.contentChanges[0].rangeLength,
                             event.contentChanges[0].range.start.character
                         ),
 
                         // New end
                         new vscode.Position(
                             affectedHighlight.selection.end.line -
-                            event.contentChanges[0].range.end.line,
+                            event.contentChanges[0].rangeLength,
                             event.contentChanges[0].range.end.character
                         ));
 
@@ -363,19 +366,28 @@ export class HighlightPositionShift {
             }
         });
 
-        // Merge new highlights to member highlightsToMerge: Array<IHighlight>
-        this.highlightsToMerge.forEach((highlightToMerge, index) => {
-            affectedHighlights.forEach((affectedHighlight) => {
+        // Push or merge new highlights to member highlightsToMerge: Array<IHighlight>
+        if (this.highlightsToMerge.length < 1) {
+            affectedHighlights.forEach((affectedHighlight: IHighlight) => {
+                this.highlightsToMerge.push(affectedHighlight);
+            });
+
+            return Promise.resolve();
+        }
+        for (var i in this.highlightsToMerge) {
+            for (var j in affectedHighlights) {
 
                 //  Match? 
-                if (highlightToMerge.name === affectedHighlight.name) {
+                if (this.highlightsToMerge[i].name === affectedHighlights[j].name) {
 
                     // Merge new highlight with new selection positions
-                    this.highlightsToMerge[index] = affectedHighlight;
+                    this.highlightsToMerge.length > 0 ? 
+                    this.highlightsToMerge[i] = affectedHighlights[j] : 
+                    this.highlightsToMerge.push(affectedHighlights[j]);
                 }
-            });
-        });
-
+            }
+        }
+        
         return Promise.resolve();
     }
     public async dispatch(context: vscode.ExtensionContext) {
@@ -384,20 +396,29 @@ export class HighlightPositionShift {
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
 
         // User has highlights?
-        if (!highlights) {
+        if (!highlights || !this.highlightsToMerge) {
             return Promise.resolve();
         }
 
         // Merge updated highlights to workspace
-        highlights.forEach((highlight, index) => {
-            this.highlightsToMerge.forEach((highlightToMerge: IHighlight) => {
-                if (highlight.name === highlightToMerge.name) {
-                    highlights ? highlights[index] = highlightToMerge : console.log('');
+        for (var i in highlights) {
+            for (var j in this.highlightsToMerge) {
+
+                //  Match? 
+                if (highlights[i].name === this.highlightsToMerge[j].name) {
+
+                    // Merge new highlight with new selection positions
+                    highlights.length > 0 ? 
+                    highlights[i] = this.highlightsToMerge[j] : 
+                    highlights.push(this.highlightsToMerge[j]);
                 }
-            });
-        });
+            }
+        }
 
         // Save new highlights
         context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
+
+        // Reset
+        this.highlightsToMerge = [];
     }
 }
