@@ -321,6 +321,7 @@ export class HighlightPositionShift {
 
         // Map new selection positions to affect highlights
         affectedHighlights.map((affectedHighlight: IHighlight) => {
+            let offset: number = event.contentChanges[0].range.isSingleLine ? 1 :  event.contentChanges[0].rangeLength;
 
             switch (op) {
                 case 'add':
@@ -328,15 +329,13 @@ export class HighlightPositionShift {
 
                         // New start
                         new vscode.Position(
-                            affectedHighlight.selection.start.line +
-                            event.contentChanges[0].rangeLength,
+                            affectedHighlight.selection.start.line + offset,
                             event.contentChanges[0].range.start.character
                         ),
 
                         // New end
                         new vscode.Position(
-                            affectedHighlight.selection.end.line +
-                            event.contentChanges[0].rangeLength,
+                            affectedHighlight.selection.end.line + offset,
                             event.contentChanges[0].range.end.character
                         ));
 
@@ -347,15 +346,13 @@ export class HighlightPositionShift {
 
                         // New start
                         new vscode.Position(
-                            affectedHighlight.selection.start.line -
-                            event.contentChanges[0].rangeLength,
+                            affectedHighlight.selection.start.line - offset,
                             event.contentChanges[0].range.start.character
                         ),
 
                         // New end
                         new vscode.Position(
-                            affectedHighlight.selection.end.line -
-                            event.contentChanges[0].rangeLength,
+                            affectedHighlight.selection.end.line - offset,
                             event.contentChanges[0].range.end.character
                         ));
 
@@ -395,7 +392,7 @@ export class HighlightPositionShift {
         //  Get highlights and merge
         let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
 
-        // User has highlights?
+        // No user saved highlights? No highlights affected to merge?
         if (!highlights || !this.highlightsToMerge) {
             return Promise.resolve();
         }
