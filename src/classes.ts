@@ -1,435 +1,235 @@
-import { IHighlighter, ISubscriber } from './interfaces';
-import * as vscode from 'vscode';
-import * as constants from './constants';
-import * as fs from 'fs';
-import * as path from 'path';
-import { IHighlight } from './types';
+import { 
+    USER_COLOR_CHOICE, 
+    EDITOR_BG_COLOR, 
+    HIGHLIGHTS_KEY, 
+    COLORS_PATH, 
+    EMPTY_STRING, 
+    GIVE_A_NAME, 
+    NO_SAVED_HIGHLIGHTS, 
+    NO_NAME_SET, 
+    PICK_A_COLOR 
+} from './constants';
+import * as fs from "fs";
+import * as path from "path";
+import { Highlight } from "./types";
+import {
+    DecorationRenderOptions, 
+    ExtensionContext,
+    InputBox,
+    Memento, 
+    QuickPick, 
+    QuickPickItem,
+    QuickInputButton,
+    Range, 
+    TextEditor, 
+    ThemeColor, 
+    TextEditorDecorationType, 
+    Uri,
+    window,
+    Event, 
+} from 'vscode';
 
-export class Highlighter implements IHighlighter {
-
-    /** PUBLIC */
-    public async highlightSelection(context: vscode.ExtensionContext): Promise<number> {
-
-        // Get active text file
-        console.log('Highlight lines called...');
-        const editor = vscode.window.activeTextEditor;
-
-        // User made edits?
-        if (!editor) {
-            vscode.window.showInformationMessage('No line or folder selection has been made');
-            return Promise.resolve(1);
-        }
-
-        // Wait for user to enter value
-        let name: string = await this.acquireHighlightName();
-
-        // Get highlights
-        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        if (highlights) {
-
-            //  Pull list of existing matching names
-            let existingMatches: Array<any> = highlights.filter(h => { return h.name === name; });
-
-            // Exists? Reproduce try again
-            if (existingMatches.length > 0) {
-                vscode.window.showInformationMessage(`Highlight '${name}' already exists, please choose a different name`);
-                this.highlightSelection(context);
-                return Promise.resolve(1);
-            }
-        }
-
-        // Wait for user to choose highlight color
-        let hexValue: string = await this.acquireColorChoice();
-
-        // Save hightlight and decorate current view
-        this.saveHighlight(context, editor, hexValue, name);
-        this.decorate(editor, hexValue, editor.selection);
-        return Promise.resolve(0);
+class Base {
+    protected editor: TextEditor | undefined;
+    constructor() {
+        this.editor = window.activeTextEditor;
     }
-    public async findHighlight(context: vscode.ExtensionContext): Promise<number> {
-
-        // Get highlights
-        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        // Has highlights?
-        if (!highlights) {
-            vscode.window.showInformationMessage('You do not have any saved highlights');
-            return Promise.resolve(1);
-        }
-        if (highlights.length < 1) {
-            vscode.window.showInformationMessage('You do not have any saved highlights');
-            return Promise.resolve(1);
-        }
-
-        //  Get user's highlight selection to bring to view
-        let selectedHighlight: IHighlight = await this.showHighlights(highlights);
-
-        //  Take the user to their selected highlight
-        let range: vscode.Range = new vscode.Range(selectedHighlight.selection.start, selectedHighlight.selection.end);
-        const editor: vscode.TextEditor = await vscode.window.showTextDocument(selectedHighlight.uri, {
-            selection: range
-        });
-
-        // Decorate the located highlight
-        this.decorate(editor, selectedHighlight.hexValue, selectedHighlight.selection);
-        return Promise.resolve(0);
+    public async get_editor(): Promise<void> {
+        this.editor = window.activeTextEditor;
+        return Promise.resolve();
     }
-    public async removeHighlight(context: vscode.ExtensionContext): Promise<number> {
-
-        // Get highlights
-        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        // Has highlights?
-        if (!highlights || highlights.length < 1) {
-            vscode.window.showInformationMessage('You do not have any saved highlights');
-            return Promise.resolve(1);
-        }
-
-        //  Get user's highlight selection to bring to view
-        let selectedHighlight: IHighlight = await this.showHighlights(highlights);
-
-        // Pop index
-        highlights.forEach((highlight: IHighlight, index: number) => {
-            if (highlight.name === selectedHighlight.name) {
-                highlights ? highlights.splice(index, 1) : console.log('No index to splice');
-            }
-        });
-
-        // Update saved highlights object
-        context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-
-        // Get active editor and restore lines to original theme color
-        const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
-        if (editor) {
-
-            // Restore original window line theme color
-            const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
-            this.decorate(editor, hexValue, selectedHighlight.selection);
-        }
-
-        return Promise.resolve(0);
-    }
-    public async removeAllHighlights(context: vscode.ExtensionContext) {
-
-        // Get highlights
-        let highlights: IHighlight[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        // Remove saved highlights
-        context.globalState.update(constants.HIGHLIGHTS_KEY, []);
-
-        // Has highlights?
-        if (!highlights) {
-            vscode.window.showInformationMessage('No highlights to remove');
-            return Promise.resolve(1);
-        }
-
-        // Decorate any highlights on existing page
-        const editor: vscode.TextEditor | undefined = vscode.window.activeTextEditor;
-        if (editor) {
-            const hexValue: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
-            highlights.forEach((highlight) => {
-                if (highlight.uri === editor.document.uri) {
-                    this.decorate(editor, hexValue, highlight.selection);
-                }
-            });
-        }
-        vscode.window.showInformationMessage('All your highlights have been removed');
-        return Promise.resolve(0);
-    }
-    public async decorate(editor: vscode.TextEditor, hexValue: string | vscode.ThemeColor, selection: vscode.Selection): Promise<number> {
-
-        // string type? ThemeColor type?
-        const decorationTypeOptions: vscode.DecorationRenderOptions = {
+}
+export class Style extends Base {
+    private options: DecorationRenderOptions;
+    private type: TextEditorDecorationType;
+    constructor() {
+        super();
+        this.options = {
             isWholeLine: true,
             light: {
-                backgroundColor: `#${hexValue}`,
+                backgroundColor: new ThemeColor(EDITOR_BG_COLOR),
             },
             dark: {
-                backgroundColor: `#${hexValue}`,
+                backgroundColor: new ThemeColor(EDITOR_BG_COLOR),
             },
         };
-        const type: vscode.TextEditorDecorationType = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-        editor.setDecorations(type, [
-            new vscode.Selection(
-                new vscode.Position(selection.start.line, selection.start.character),
-                new vscode.Position(selection.end.line, selection.end.character)
-            )
-        ]);
-        return Promise.resolve(0);
+        this.type = window.createTextEditorDecorationType(this.options);
     }
-    /** PRIVATE */
-    private async acquireHighlightName(): Promise<string> {
+    public async decorate(highlights: Highlight[]): Promise<void> {
+        await this.get_editor();
+        if (this.editor) {
+            for (let i = 0; i < highlights.length; i++) {
+                this.options.light = new ThemeColor(`#${highlights[i].theme}`);
+                this.options.dark  = new ThemeColor(`#${highlights[i].theme}`);
+                this.type = window.createTextEditorDecorationType(this.options);
+                this.editor.setDecorations(this.type, [highlights[i].selection]);
+            }
+        }
+        return Promise.resolve();
+    }
+    public async undecorate(highlights: Highlight[]) {
+        await this.get_editor();
+        if (this.editor) {
+            for (let i = 0; i < highlights.length; i++) {
+                this.options.light = new ThemeColor(EDITOR_BG_COLOR);
+                this.options.dark  = new ThemeColor(EDITOR_BG_COLOR);
+                this.type = window.createTextEditorDecorationType(this.options);
+                this.editor.setDecorations(this.type, [highlights[i].selection]);
+            }
+        }
+        return Promise.resolve();
+    }
+}
+export class Store extends Base {
+    highlights: Highlight[] | undefined;
+    constructor() {
+        super();
+        this.highlights = [];
+    }
+    public async get(state: Memento): Promise<Highlight[] | undefined> {
+        return Promise.resolve(state.get(HIGHLIGHTS_KEY) as Highlight[]);
+    }
+    public async save(name: string, hex: string, state: Memento): Promise<void> {
+        // get state memento with context.globalState -> get()
+        // we want to limit the input we pass since typically 
+        // input is not cached inline by interpreters
+        await this.get_editor();
+        this.highlights = await state.get(HIGHLIGHTS_KEY);
+        this.highlights && this.editor ? this.highlights.push({
+            name: name,
+            theme: new ThemeColor(`#${hex}`),
+            uri: this.editor.document.uri,
+            selection: this.editor.selection,
+        }) :
+            console.log();
+        state.update(HIGHLIGHTS_KEY, this.highlights);
+        return Promise.resolve();
+    }
+    public async remove(name: string, state: Memento): Promise<void> {
+        this.highlights = await this.get(state);
+        if (!this.highlights || this.highlights.length < 1) {
+            window.showInformationMessage(NO_SAVED_HIGHLIGHTS);
+            return Promise.resolve();
+        }
+        this.highlights.forEach((highlight: Highlight, index: number) => {
+            if (this.highlights && highlight.name === name) {
+                delete this.highlights[index];
+            }
+        });
+        state.update(HIGHLIGHTS_KEY, this.highlights);
+        return Promise.resolve();
+    }
+    public async removeAll(state: Memento): Promise<void> {
+        state.update(HIGHLIGHTS_KEY, []);
+        return Promise.resolve();
+    }
+    public async update(list: Highlight[], state: Memento): Promise<void> {
+        this.highlights = await this.get(state);
+        if (!this.highlights) { return; }
+        this.highlights.map((highlight: Highlight) => {
+            for (let i = 0; i < list.length; i++) {
+                if (highlight.name === list[i].name) {
+                    highlight = list[i];
+                }
+            }
+        });
+        state.update(HIGHLIGHTS_KEY, this.highlights);
+        return Promise.resolve();
+    }
+}
+export class Present {
+    private buttons: Array<QuickInputButton> = [];
+    private colorPicker: QuickPick<QuickPickItem> = window.createQuickPick();
+    private baseDir = path.resolve(__dirname).replace('out', 'extension/');
+    private colorsDirFiles: Array<string> = fs.readdirSync(`${this.baseDir}${COLORS_PATH}`);
+    constructor() { }
+    public async choose_highlight_color(): Promise<string> {
+        // Create color quick picker
+        this.colorPicker.canSelectMany = false;
+        this.colorPicker.placeholder = PICK_A_COLOR;
 
+        // Create and present buttons
+        this.colorsDirFiles.forEach((png, index) => {
+            let button: QuickInputButton = {
+                iconPath: Uri.file(`${this.baseDir}${COLORS_PATH}${png}`)
+            };
+            this.buttons.push(button);
+            if (index === this.colorsDirFiles.length - 1) {
+                this.colorPicker.buttons = this.buttons;
+            }
+        });
+        this.colorPicker.buttons = this.buttons;
+        this.colorPicker.show();
+
+        // Await and resolve user's color selection
+        return new Promise((resolve, reject) => {
+            this.colorPicker.onDidTriggerButton((button: QuickInputButton) => {
+                const hexValue: string = 
+                button.iconPath.toString()
+                .replace(`${this.baseDir}${COLORS_PATH}`, '')
+                .replace('.png', '');
+                this.colorPicker.dispose();
+                resolve(hexValue ? hexValue : EMPTY_STRING);
+            });
+        });
+    }
+    public async choose_highlight_name(): Promise<string> {
         // Ask for input
-        let input: vscode.InputBox = vscode.window.createInputBox();
-        input.title = "Give a name for this highlight to find it again!";
+        let input: InputBox = window.createInputBox();
+        input.title = GIVE_A_NAME;
         input.show();
 
         // Notify caller user has input value
         return new Promise((resolve, reject) => {
             input.onDidAccept(() => {
                 if (!input.value) {
-                    vscode.window.showInformationMessage('No name set for selection, please try again');
-                    this.acquireHighlightName();
+                    window.showInformationMessage(NO_NAME_SET);
+                    this.choose_highlight_name();
                 } else {
                     resolve(input.value);
                 }
             });
         });
     }
-    private async acquireColorChoice(): Promise<string> {
-
-        // Create color quick picker
-        let colorPicker: vscode.QuickPick<vscode.QuickPickItem> = vscode.window.createQuickPick();
-        colorPicker.canSelectMany = false;
-        colorPicker.placeholder = 'Pick a color';
-        let buttons: Array<vscode.QuickInputButton> = [];
-        var baseDir = path.resolve(__dirname).replace('out', 'extension/');
-        const colorsDirFiles: Array<string> = fs.readdirSync(`${baseDir}${constants.COLORS_PATH}`);
-
-        // Create and present buttons
-        colorsDirFiles.forEach((png, index) => {
-            let button: vscode.QuickInputButton = {
-                iconPath: vscode.Uri.file(`${baseDir}${constants.COLORS_PATH}${png}`)
-            };
-            buttons.push(button);
-            if (index === colorsDirFiles.length - 1) {
-                colorPicker.buttons = buttons;
-            }
-        });
-        colorPicker.buttons = buttons;
-        colorPicker.show();
-
-        // Await and resolve user's color selection
-        return new Promise((resolve, reject) => {
-            colorPicker.onDidTriggerButton((selection: any) => {
-                const hexValue: string = selection.iconPath.path.replace(`${baseDir}${constants.COLORS_PATH}`, '').replace('.png', '');
-                colorPicker.dispose();
-                resolve(hexValue);
-            });
-        });
-    }
-    private async saveHighlight(context: vscode.ExtensionContext, editor: vscode.TextEditor, hexValue: string, name: string): Promise<number> {
-
-        // Get highlights
-        let highlights: object[] | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        // Has highlight?
-        if (highlights) {
-            highlights.push({
-                name: name,
-                hexValue: hexValue,
-                uri: editor.document.uri,
-                selection: editor.selection
-            });
-            context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-
-        } else {
-            throw new Error('Could not save highlight');
+    public async choose_find_highlight(highlights: Highlight[]): Promise<Highlight | void> {
+        // Has highlights?
+        if (highlights.length < 1) {
+            window.showInformationMessage(NO_SAVED_HIGHLIGHTS);
+            return Promise.resolve();
         }
 
-        return Promise.resolve(0);
-    }
-    private async showHighlights(highlights: Array<IHighlight>): Promise<IHighlight> {
-
-        // Format selections for user
+        //  Take the user to their selected highlight
         let selections: Array<string> = [];
-        highlights.forEach((h) => {
+        highlights.forEach((h: Highlight) => {
             selections.push(`${h.name} - ${h.uri.path}`);
         });
 
         // Show selections to user
         return new Promise((resolve, reject) => {
-            let quickPick: Thenable<string | undefined> = vscode.window.showQuickPick(selections);
+            let quickPick: Thenable<string | undefined> = window.showQuickPick(selections);
             if (quickPick) {
 
                 // Reduce choice to just the highlight name for highlight match
-                quickPick.then((selection: string | undefined) => {
-                    if (selection) {
-                        let delimiterIndex: number = selection.indexOf('-');
-                        let name: string = selection.slice(0, delimiterIndex).trim();
-                        let highlight: Array<IHighlight> = highlights.filter((h: IHighlight) => { return h.name === name; });
-                        resolve(highlight[0]);
+                quickPick.then((choice: string | undefined) => {
+                    if (choice) {
+                        let highlight: Highlight[] = highlights.filter((h: Highlight) => {
+                            return h.name === choice;
+                        });
+                        resolve(highlight[0] as Highlight);
+                    } else {
+                        resolve();
                     }
                 });
             }
         });
     }
 }
-export class Subscriber implements ISubscriber {
-    public async onActiveEditorDidChangeHandler(context: vscode.ExtensionContext, editor: vscode.TextEditor, highlighter: Highlighter): Promise<void> {
-
-        /** Populate new view with existing highlights */
-        var highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-        if (highlights) {
-            var applyHighlights: Array<IHighlight> = highlights.filter(h => { return h.uri.fsPath === editor.document.uri.fsPath; });
-            applyHighlights.forEach((highlight: IHighlight) => {
-                highlighter.decorate(editor, highlight.hexValue, highlight.selection);
-            });
-        }
-        return Promise.resolve();
-    }
-}
-
-export class HighlightPositionShift {
-
-    /**
-     *  Array that the changes of a single, unique highlight
-     *  that's position is shifted as the result of the user
-     *  adding or removing lines in a text document 
-     */
-    private highlightsToMerge: Array<IHighlight> = [];
-
-    public async set(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
-        /** Temporarily saves to memory any necessary shifts in number of lines
-         *  that affect currently existing highlights. This temporary store is dumped
-         *  when the user saves the file with a matching fsPath to any highlight
-         *  that has been shifted.
-         */
-        switch (event.contentChanges[0].text) {
-
-            // Delete? Subtract
-            case "":
-                this.shift(context, event, 'subtract');
-                break;
-
-            // Carriage return? Add
-            case "\n":
-                this.shift(context, event, 'add');
-                break;
-
-            default:
-                throw new Error(`Selection change did not catch character: ${event.contentChanges[0].text}`);
-        }
-    }
-    private async shift(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent, op: string): Promise<void> {
-        /** Happens when a user adds or deletes lines 
-         *  at any index located before any highlight(s)
-         */
-
-        // Get highlights
-        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        // No saved highlights by user?
-        if (!highlights) {
-            return Promise.resolve();
-        }
-
-        // Highlights that are in the same file and affected
-        let affectedHighlights: Array<IHighlight> = highlights.filter(h => {
-            return event.document.uri.fsPath === h.uri.fsPath &&
-                event.contentChanges[0].range.start.line < h.selection.start.line;
+export class Navigate {
+    constructor() { }
+    public async go_to(highlight: Highlight): Promise<void> {
+        const editor: TextEditor = await window.showTextDocument(highlight.uri, {
+            selection: highlight.selection
         });
-
-        // No affected highlights to shift?
-        if (!affectedHighlights) {
-            return Promise.resolve();
-        }
-
-        // Map new selection positions to affect highlights
-        affectedHighlights.map((affectedHighlight: IHighlight) => {
-            let offset: number = event.contentChanges[0].range.isSingleLine ? 1 :  event.contentChanges[0].rangeLength;
-
-            switch (op) {
-                case 'add':
-                    affectedHighlight.selection = new vscode.Selection(
-
-                        // New start
-                        new vscode.Position(
-                            affectedHighlight.selection.start.line + offset,
-                            event.contentChanges[0].range.start.character
-                        ),
-
-                        // New end
-                        new vscode.Position(
-                            affectedHighlight.selection.end.line + offset,
-                            event.contentChanges[0].range.end.character
-                        ));
-
-                    break;
-
-                case 'subtract':
-                    affectedHighlight.selection = new vscode.Selection(
-
-                        // New start
-                        new vscode.Position(
-                            affectedHighlight.selection.start.line - offset,
-                            event.contentChanges[0].range.start.character
-                        ),
-
-                        // New end
-                        new vscode.Position(
-                            affectedHighlight.selection.end.line - offset,
-                            event.contentChanges[0].range.end.character
-                        ));
-
-                    break;
-
-                default:
-                    throw new Error('Only add and subtract are valid operations');
-            }
-        });
-
-        // Push or merge new highlights to member highlightsToMerge: Array<IHighlight>
-        if (this.highlightsToMerge.length < 1) {
-            affectedHighlights.forEach((affectedHighlight: IHighlight) => {
-                this.highlightsToMerge.push(affectedHighlight);
-            });
-
-            return Promise.resolve();
-        }
-        for (var i in this.highlightsToMerge) {
-            for (var j in affectedHighlights) {
-
-                //  Match? 
-                if (this.highlightsToMerge[i].name === affectedHighlights[j].name) {
-
-                    // Merge new highlight with new selection positions
-                    this.highlightsToMerge.length > 0 ? 
-                    this.highlightsToMerge[i] = affectedHighlights[j] : 
-                    this.highlightsToMerge.push(affectedHighlights[j]);
-                }
-            }
-        }
-        
         return Promise.resolve();
-    }
-    private async reduce() {
-        /** Happens when the user deletes lines involving highlights */
-    }
-    public async dispatchChanges(context: vscode.ExtensionContext) {
-        /** Persist the tracked shifts in highlights saved to the workspace
-         *  cache and dump the member Array.
-         */
-
-        //  Get highlights and merge
-        let highlights: Array<IHighlight> | undefined = context.globalState.get(constants.HIGHLIGHTS_KEY);
-
-        // No user saved highlights? No highlights affected to merge?
-        if (!highlights || !this.highlightsToMerge) {
-            return Promise.resolve();
-        }
-
-        // Merge updated highlights to workspace
-        for (var i in highlights) {
-            for (var j in this.highlightsToMerge) {
-
-                //  Match? 
-                if (highlights[i].name === this.highlightsToMerge[j].name) {
-
-                    // Merge new highlight with new selection positions
-                    highlights.length > 0 ? 
-                    highlights[i] = this.highlightsToMerge[j] : 
-                    highlights.push(this.highlightsToMerge[j]);
-                }
-            }
-        }
-
-        // Save new highlights
-        context.globalState.update(constants.HIGHLIGHTS_KEY, highlights);
-
-        // Reset
-        this.highlightsToMerge = [];
     }
 }

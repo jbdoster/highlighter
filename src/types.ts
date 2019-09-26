@@ -1,12 +1,12 @@
-import * as vscode from 'vscode';
-import { Highlighter } from './classes';
-export type IHighlight  = {
-        name:      string;
-        hexValue:  string | vscode.ThemeColor;
-        selection: vscode.Selection;
-        uri:       vscode.Uri;
-};
-export type IUpdateHighlight  = {
-        appliedHighlight: string;
-        updatedSelection: vscode.Selection;
+import {
+        Selection,
+        ThemeColor,
+        Uri
+} from 'vscode';
+
+export type Highlight = {
+        name: string;
+        selection: Selection;
+        theme: ThemeColor;
+        uri: Uri;
 };
