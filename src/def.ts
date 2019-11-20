@@ -1,10 +1,21 @@
-import * as constants from './constants';
+import * as Constants from './Constants';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-export class PageHighlighter {
+
+/**
+ * @class Highlighter
+ * @function {Void} highlight_selection
+ * @function {Void} find_highlight
+ * @function {Void} remove_highlight
+ * @function {Void} remove_all_highlights
+ */
+export class Highlighter {
+
     private subscribed = false;
+
     constructor() { }
+
     public async highlight_selection(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
@@ -18,6 +29,7 @@ export class PageHighlighter {
         let highlight = await this.__handle_user_input(context, editor);
         return Promise.resolve();
     }
+
     public async find_highlight(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
@@ -53,6 +65,7 @@ export class PageHighlighter {
         }
         return Promise.resolve();
     }
+
     public async remove_highlight(context: vscode.ExtensionContext) {
         console.log('Presenting highlights to remove...');
         if (!this.subscribed) {
@@ -73,6 +86,7 @@ export class PageHighlighter {
         // return Promise.all([
         // ]);
     }
+
     public async remove_all_highlights(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
             this.__subscribe(context);
@@ -91,6 +105,15 @@ export class PageHighlighter {
     //     }
     //     context.workspaceState.get('')
     // }
+    /**
+     *  Adjust to user's changes displacing their saved highlights with 
+     *  carriage returns and full line deletions.
+     *  
+     */
+    private async __displacement() {
+
+    }
+
     private async __handle_user_input(context: vscode.ExtensionContext, editor: vscode.TextEditor) {
         let input = vscode.window.createInputBox();
         input.title = "Give a name for this highlight to find it again!";
@@ -156,6 +179,7 @@ export class PageHighlighter {
         }
         console.log('User entered name', highlightName);
     }
+
     private __subscribe(context: vscode.ExtensionContext) {
         console.log('not yet subscribed, setting all listeners...');
         vscode.window.onDidChangeActiveTextEditor((event) => {
@@ -192,6 +216,7 @@ export class PageHighlighter {
         });
         this.subscribed = true;
     }
+
     private async __on_name_input(input: vscode.InputBox) {
         return new Promise((resolve, reject) => {
             input.onDidAccept(() => {
@@ -199,17 +224,18 @@ export class PageHighlighter {
             });
         });
     }
+
     private async __on_color_input() {
         let colorPicker: vscode.QuickPick<vscode.QuickPickItem> = vscode.window.createQuickPick();
         colorPicker.canSelectMany = false;
         colorPicker.placeholder = 'Pick a color';
         let buttons: Array<vscode.QuickInputButton> = [];
         var baseDir = path.resolve(__dirname).replace('out', 'extension/');
-        const colorsDirFiles: Array<string> = fs.readdirSync(`${baseDir}${constants.COLORS_PATH}`);
+        const colorsDirFiles: Array<string> = fs.readdirSync(`${baseDir}${Constants.COLORS_PATH}`);
         const options: vscode.MessageOptions = {modal: true};
         colorsDirFiles.forEach((png, index) => {
             let button: vscode.QuickInputButton = {
-                iconPath: vscode.Uri.file(`${baseDir}${constants.COLORS_PATH}${png}`)
+                iconPath: vscode.Uri.file(`${baseDir}${Constants.COLORS_PATH}${png}`)
             };
             buttons.push(button);
             if (index === colorsDirFiles.length - 1) {
@@ -219,16 +245,18 @@ export class PageHighlighter {
         colorPicker.show();
         return new Promise((resolve, reject) => {
             colorPicker.onDidTriggerButton((selection: any) => {
-                let hexValue: string = this.__get_hex_value(`${baseDir}${constants.COLORS_PATH}`, selection.iconPath.path);
+                let hexValue: string = this.__get_hex_value(`${baseDir}${Constants.COLORS_PATH}`, selection.iconPath.path);
                 colorPicker.dispose();
                 resolve(hexValue);
             });
         });
     }
+
     private __get_hex_value(colorsDir: string, selectionPath: any) {
         const hexValue: string = selectionPath.replace(colorsDir, '').replace('.png', '');
         return hexValue;
     }
+
     private __produce_range(editor: vscode.TextEditor) {
         let beg: Array<number> = [editor.selection.start.line, editor.selection.start.character];
         let end: Array<number> = [editor.selection.end.line, editor.selection.end.character];
@@ -238,6 +266,7 @@ export class PageHighlighter {
         );
         return range;
     }
+
     private async __remove_stored_object(context: vscode.ExtensionContext, highlights: Array<object>, selection: string) {
         let newHighlights = highlights.filter((highlight: any) => { return highlight.name !== selection; });
         context.workspaceState.update('highlight-details', newHighlights)
@@ -246,6 +275,7 @@ export class PageHighlighter {
             return Promise.resolve();
         });
     }
+
     private async __remove_decoration(editor: vscode.TextEditor, highlightInfo: any) {
         let e: any = vscode.window.activeTextEditor;
         if (e) {
@@ -274,6 +304,7 @@ export class PageHighlighter {
             return Promise.resolve('No editor instance available');
         }
     }
+
     private async __highlight_exists(context: vscode.ExtensionContext, input: string) {
         var highlights: any = context.workspaceState.get('highlight-details');
         if (!highlights) {
@@ -286,4 +317,5 @@ export class PageHighlighter {
             return Promise.resolve(false);
         }
     }
+
 }
