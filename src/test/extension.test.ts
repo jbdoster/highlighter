@@ -7,10 +7,10 @@ import * as jsonfile from 'jsonfile';
 suite("Units", function () {
     let highlighter_instance: DEFINITIONS.PageHighlighter = new DEFINITIONS.PageHighlighter();
     test("Highlighter instance has all required methods?", function() {
-        assert.equal(typeof highlighter_instance.highlightSelection, typeof  Function);
-        assert.equal(typeof highlighter_instance.findHighlight, typeof  Function);
-        assert.equal(typeof highlighter_instance.removeHighlight, typeof  Function);
-        assert.equal(typeof highlighter_instance.removeAllHighlights, typeof  Function);
+        assert.equal(typeof highlighter_instance.highlight_selection, typeof  Function);
+        assert.equal(typeof highlighter_instance.find_highlight, typeof  Function);
+        assert.equal(typeof highlighter_instance.remove_highlight, typeof  Function);
+        assert.equal(typeof highlighter_instance.remove_all_highlights, typeof  Function);
     });
     test("Package.json has all required commands??", function() {
         let file: any = jsonfile.readFileSync('package.json');

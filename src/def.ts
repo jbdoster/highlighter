@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
 export class PageHighlighter {
     private subscribed = false;
     constructor() { }
-    public async highlightSelection(context: vscode.ExtensionContext) {
+    public async highlight_selection(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
         }
@@ -15,10 +15,10 @@ export class PageHighlighter {
             vscode.window.showInformationMessage('No line or folder selection has been made');
             return Promise.resolve();
         }
-        let highlight = await this.__handleUserInput(context, editor);
+        let highlight = await this.__handle_user_input(context, editor);
         return Promise.resolve();
     }
-    public async findHighlight(context: vscode.ExtensionContext) {
+    public async find_highlight(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
         }
@@ -53,7 +53,7 @@ export class PageHighlighter {
         }
         return Promise.resolve();
     }
-    public async removeHighlight(context: vscode.ExtensionContext) {
+    public async remove_highlight(context: vscode.ExtensionContext) {
         console.log('Presenting highlights to remove...');
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
@@ -68,19 +68,19 @@ export class PageHighlighter {
         let editor: any = vscode.window.activeTextEditor;
         var highlightInfo: Array<object> = highlights.filter((highlight: any) => { return highlight.name === selection; });
         console.log(selection);
-        this.__removeStoredObject(context, highlights, selection);
-        this.__removeDecoration(editor, highlightInfo[0]);
+        this.__remove_stored_object(context, highlights, selection);
+        this.__remove_decoration(editor, highlightInfo[0]);
         // return Promise.all([
         // ]);
     }
-    public async removeAllHighlights(context: vscode.ExtensionContext) {
+    public async remove_all_highlights(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
             this.__subscribe(context);
         }
         let highlights: any = context.workspaceState.get('highlight-details');
         let editor: any = vscode.window.activeTextEditor;
         highlights.forEach((highlight: any) => {
-            this.__removeDecoration(editor, highlight);
+            this.__remove_decoration(editor, highlight);
         });
         context.workspaceState.update('highlight-details', []);
         vscode.window.showInformationMessage('All your highlights have been removed');
@@ -91,22 +91,22 @@ export class PageHighlighter {
     //     }
     //     context.workspaceState.get('')
     // }
-    private async __handleUserInput(context: vscode.ExtensionContext, editor: vscode.TextEditor) {
+    private async __handle_user_input(context: vscode.ExtensionContext, editor: vscode.TextEditor) {
         let input = vscode.window.createInputBox();
         input.title = "Give a name for this highlight to find it again!";
         input.show();
-        let i: any        = await this.__onNameInput(input);
+        let i: any        = await this.__on_name_input(input);
         if (!input.value) {
             vscode.window.showInformationMessage('No name set for selection, please try again');
-            this.__handleUserInput(context, editor);
+            this.__handle_user_input(context, editor);
         }
-        let exists: any = await this.__highlightExists(context, input.value);
+        let exists: any = await this.__highlight_exists(context, input.value);
         if (exists === true) {
             vscode.window.showInformationMessage(`Highlight ${input.value} already exists, please choose a different name`);
-            this.__handleUserInput(context, editor);
+            this.__handle_user_input(context, editor);
             return Promise.resolve();
         }
-        let hexValue: any = await this.__onColorInput();
+        let hexValue: any = await this.__on_color_input();
         let highlightName = input.value;
         input.dispose();
         const decorationTypeOptions: vscode.DecorationRenderOptions = {
@@ -119,7 +119,7 @@ export class PageHighlighter {
             },
         };
         const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-        const r: vscode.Range = this.__produceRange(editor);
+        const r: vscode.Range = this.__produce_range(editor);
         editor.setDecorations(type, [r]);
         const key = `highlight-details`;
         const previousObject: any = context.workspaceState.get(key);
@@ -192,14 +192,14 @@ export class PageHighlighter {
         });
         this.subscribed = true;
     }
-    private async __onNameInput(input: vscode.InputBox) {
+    private async __on_name_input(input: vscode.InputBox) {
         return new Promise((resolve, reject) => {
             input.onDidAccept(() => {
                 resolve();
             });
         });
     }
-    private async __onColorInput() {
+    private async __on_color_input() {
         let colorPicker: vscode.QuickPick<vscode.QuickPickItem> = vscode.window.createQuickPick();
         colorPicker.canSelectMany = false;
         colorPicker.placeholder = 'Pick a color';
@@ -219,17 +219,17 @@ export class PageHighlighter {
         colorPicker.show();
         return new Promise((resolve, reject) => {
             colorPicker.onDidTriggerButton((selection: any) => {
-                let hexValue: string = this.__getHexValue(`${baseDir}${constants.COLORS_PATH}`, selection.iconPath.path);
+                let hexValue: string = this.__get_hex_value(`${baseDir}${constants.COLORS_PATH}`, selection.iconPath.path);
                 colorPicker.dispose();
                 resolve(hexValue);
             });
         });
     }
-    private __getHexValue(colorsDir: string, selectionPath: any) {
+    private __get_hex_value(colorsDir: string, selectionPath: any) {
         const hexValue: string = selectionPath.replace(colorsDir, '').replace('.png', '');
         return hexValue;
     }
-    private __produceRange(editor: vscode.TextEditor) {
+    private __produce_range(editor: vscode.TextEditor) {
         let beg: Array<number> = [editor.selection.start.line, editor.selection.start.character];
         let end: Array<number> = [editor.selection.end.line, editor.selection.end.character];
         const range = new vscode.Range(
@@ -238,7 +238,7 @@ export class PageHighlighter {
         );
         return range;
     }
-    private async __removeStoredObject(context: vscode.ExtensionContext, highlights: Array<object>, selection: string) {
+    private async __remove_stored_object(context: vscode.ExtensionContext, highlights: Array<object>, selection: string) {
         let newHighlights = highlights.filter((highlight: any) => { return highlight.name !== selection; });
         context.workspaceState.update('highlight-details', newHighlights)
         .then((result) => {
@@ -246,7 +246,7 @@ export class PageHighlighter {
             return Promise.resolve();
         });
     }
-    private async __removeDecoration(editor: vscode.TextEditor, highlightInfo: any) {
+    private async __remove_decoration(editor: vscode.TextEditor, highlightInfo: any) {
         let e: any = vscode.window.activeTextEditor;
         if (e) {
             const color: vscode.ThemeColor = new vscode.ThemeColor('editor.background');
@@ -274,7 +274,7 @@ export class PageHighlighter {
             return Promise.resolve('No editor instance available');
         }
     }
-    private async __highlightExists(context: vscode.ExtensionContext, input: string) {
+    private async __highlight_exists(context: vscode.ExtensionContext, input: string) {
         var highlights: any = context.workspaceState.get('highlight-details');
         if (!highlights) {
             return Promise.resolve(false);
@@ -285,49 +285,5 @@ export class PageHighlighter {
         } else {
             return Promise.resolve(false);
         }
-    }
-}
-export class FolderHighlighter {
-    private subscribed = false;
-    public async highlightFolder(context: vscode.ExtensionContext) {
-        if (!this.subscribed) {
-            this.__subscribe(context);
-        }
-        context.workspaceState.get('');
-    }
-    private __subscribe(context: vscode.ExtensionContext) {
-        console.log('not yet subscribed, setting all listeners...');
-        vscode.window.onDidChangeActiveTextEditor((event) => {
-            console.log('active text editor changed');
-            var highlights: any = context.workspaceState.get('highlight-details');
-            if (event) {
-                var currentPageHighlights = highlights.filter((highlight: any) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
-                if (currentPageHighlights) {
-                    currentPageHighlights.forEach((pageHighlight: any, index: any) => {
-                        const decorationTypeOptions: vscode.DecorationRenderOptions = {
-                            isWholeLine: true,
-                            light: {
-                                backgroundColor: `#${currentPageHighlights[index].color}`,
-                            },
-                            dark: {
-                                backgroundColor: `#${currentPageHighlights[index].color}`,
-                            },
-                        };
-                        const type = vscode.window.createTextEditorDecorationType(decorationTypeOptions);
-                        const r = new vscode.Range(
-                            new vscode.Position(pageHighlight.startLine, pageHighlight.startChar),
-                            new vscode.Position(pageHighlight.endLine, pageHighlight.endChar)
-                        );
-                        const __innerEditor = vscode.window.activeTextEditor;
-                        if (__innerEditor) {
-                            __innerEditor.setDecorations(type, [r]);
-                        }
-                    });
-                }
-            } else {
-
-            }
-        });
-        this.subscribed = true;
     }
 }

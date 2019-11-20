@@ -1,8 +1,8 @@
 export const activationEvents: Array<string> = [
     "onCommand:extension.highlightLines",
-    "onCommand:extension.findHighlight",
-    "onCommand:extension.removeHighlight",
-    "onCommand:extension.removeAllHighlights"
+    "onCommand:extension.find_highlight",
+    "onCommand:extension.remove_highlight",
+    "onCommand:extension.remove_all_highlights"
 ];
 export const commands: Array<object> = [
     {
@@ -10,15 +10,15 @@ export const commands: Array<object> = [
         "title": "Highlight Line(s)"
     },
     {
-        "command": "extension.findHighlight",
+        "command": "extension.find_highlight",
         "title": "Find Highlighted Line(s)"
     },
     {
-        "command": "extension.removeHighlight",
+        "command": "extension.remove_highlight",
         "title": "Remove Highlighted Line(s)"
     },
     {
-        "command": "extension.removeAllHighlights",
+        "command": "extension.remove_all_highlights",
         "title": "Remove All Saved Highlights"
     }
 ];
