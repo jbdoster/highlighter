@@ -1,12 +1,7 @@
 import {
-    DecorationRenderOptions,
-    Location,
-    Position,
-    Range,
-    Selection
+    DecorationRenderOptions
 } from 'vscode';
 
-/** VAR */
 export const decorationTypeOptions: DecorationRenderOptions = {
     isWholeLine: true,
     light: {
@@ -17,18 +12,3 @@ export const decorationTypeOptions: DecorationRenderOptions = {
     },
 };
 export const COLORS_PATH = 'resources/imgs/colors-picker/';
-
-/** TYPE */
-export type Highlight = {
-    name: string;
-    color: string;
-    range: Range;
-    uri: string;
-    location: Location;
-    focusPosition: Position;
-    selection: Selection;
-    startLine: number;
-    startChar: number;
-    endLine: number;
-    endChar: number;
-};

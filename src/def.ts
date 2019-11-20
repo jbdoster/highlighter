@@ -2,6 +2,7 @@ import * as Constants from './Constants';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
+import { Highlight } from "./types";
 
 /**
  * @class Highlighter
@@ -18,7 +19,7 @@ export class Highlighter {
 
     public async highlight_selection(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
-            let wait = await this.__subscribe(context);
+            await this.__subscribe(context);
         }
         console.log('Highlight lines called...');
         const editor = vscode.window.activeTextEditor;
@@ -26,24 +27,27 @@ export class Highlighter {
             vscode.window.showInformationMessage('No line or folder selection has been made');
             return Promise.resolve();
         }
-        let highlight = await this.__handle_user_input(context, editor);
+        await this.__handle_user_input(context, editor);
         return Promise.resolve();
     }
 
     public async find_highlight(context: vscode.ExtensionContext) {
         if (!this.subscribed) {
-            let wait = await this.__subscribe(context);
+            await this.__subscribe(context);
         }
         console.log('Presenting highlights...');
-        var highlights: any = context.workspaceState.get('highlight-details');
+        var highlights: Highlight[] | undefined = context.workspaceState.get('highlight-details');
+        if (!highlights) {
+            return;
+        }
         if (highlights.length < 1) {
             vscode.window.showInformationMessage('You do not have any saved highlights');
             return Promise.resolve();
         }
-        const names = highlights.map((highlight: any) => { return highlight.name; });
+        const names = highlights.map((highlight: Highlight) => { return highlight.name; });
         let selection = await vscode.window.showInformationMessage('Select a highlight', ...names);
         console.log(selection);
-        const highlightInfo: any = highlights.filter((highlight: any) => { return highlight.name === selection; });
+        const highlightInfo: any = highlights.filter((highlight: Highlight) => { return highlight.name === selection; });
         const r = new vscode.Range(
             new vscode.Position(highlightInfo[0].startLine, highlightInfo[0].startChar),
             new vscode.Position(highlightInfo[0].endLine, highlightInfo[0].endChar)
@@ -71,15 +75,18 @@ export class Highlighter {
         if (!this.subscribed) {
             let wait = await this.__subscribe(context);
         }
-        var highlights: any = context.workspaceState.get('highlight-details');
+        var highlights: Highlight[] | undefined = context.workspaceState.get('highlight-details');
+        if (!highlights) {
+            return;
+        }
         if (highlights.length < 1) {
             vscode.window.showInformationMessage('You have no highlights to remove');
             return Promise.resolve();
         }
-        var names = highlights.map((highlight: any) => { return highlight.name; });
+        var names = highlights.map((highlight: Highlight) => { return highlight.name; });
         let selection: any = await vscode.window.showInformationMessage('Remove a highlight', ...names);
         let editor: any = vscode.window.activeTextEditor;
-        var highlightInfo: Array<object> = highlights.filter((highlight: any) => { return highlight.name === selection; });
+        var highlightInfo: Array<object> = highlights.filter((highlight: Highlight) => { return highlight.name === selection; });
         console.log(selection);
         this.__remove_stored_object(context, highlights, selection);
         this.__remove_decoration(editor, highlightInfo[0]);
@@ -91,9 +98,12 @@ export class Highlighter {
         if (!this.subscribed) {
             this.__subscribe(context);
         }
-        let highlights: any = context.workspaceState.get('highlight-details');
+        let highlights: Highlight[] | undefined = context.workspaceState.get('highlight-details');
+        if (!highlights) {
+            return;
+        }
         let editor: any = vscode.window.activeTextEditor;
-        highlights.forEach((highlight: any) => {
+        highlights.forEach((highlight: Highlight) => {
             this.__remove_decoration(editor, highlight);
         });
         context.workspaceState.update('highlight-details', []);
@@ -184,9 +194,12 @@ export class Highlighter {
         console.log('not yet subscribed, setting all listeners...');
         vscode.window.onDidChangeActiveTextEditor((event) => {
             console.log('active text editor changed');
-            var highlights: any = context.workspaceState.get('highlight-details');
+            var highlights: Highlight[] | undefined = context.workspaceState.get('highlight-details');
+            if (!highlights) {
+                return;
+            }
             if (event) {
-                var currentPageHighlights = highlights.filter((highlight: any) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
+                var currentPageHighlights = highlights.filter((highlight: Highlight) => { return highlight['uri']['path'] === event['document']['uri']['path']; });
                 if (currentPageHighlights) {
                     currentPageHighlights.forEach((pageHighlight: any) => {
                         const decorationTypeOptions: vscode.DecorationRenderOptions = {
@@ -267,13 +280,16 @@ export class Highlighter {
         return range;
     }
 
-    private async __remove_stored_object(context: vscode.ExtensionContext, highlights: Array<object>, selection: string) {
-        let newHighlights = highlights.filter((highlight: any) => { return highlight.name !== selection; });
-        context.workspaceState.update('highlight-details', newHighlights)
-        .then((result) => {
-            vscode.window.showInformationMessage(`highlight '${selection}' removed`);
-            return Promise.resolve();
-        });
+    private async __remove_stored_object(context: vscode.ExtensionContext, highlights: Highlight[], highlight_name: string) {
+        let new_highlights: Highlight[] = [];
+        for (var i in highlights) {
+            if (highlights[i].name !== highlight_name) {
+                new_highlights.push(highlights[i]);
+            }
+        }
+        context.workspaceState.update('highlight-details', new_highlights);
+        vscode.window.showInformationMessage(`highlight '${highlight_name}' removed`);
+        return Promise.resolve();
     }
 
     private async __remove_decoration(editor: vscode.TextEditor, highlightInfo: any) {
@@ -305,17 +321,17 @@ export class Highlighter {
         }
     }
 
-    private async __highlight_exists(context: vscode.ExtensionContext, input: string) {
-        var highlights: any = context.workspaceState.get('highlight-details');
-        if (!highlights) {
+    private async __highlight_exists(context: vscode.ExtensionContext, highlight_name: string) {
+        var highlights: Highlight[] | undefined = context.workspaceState.get('highlight-details');
+        if (!highlights){
             return Promise.resolve(false);
         }
-        let highlight: any = highlights.filter((highlight: any) => { return highlight.name === input;});
-        if (highlight.length > 0) {
-            return Promise.resolve(true);
-        } else {
-            return Promise.resolve(false);
+        for (var i in highlights) {
+            if (highlights[i].name === highlight_name) {
+                return Promise.resolve(true);
+            }
         }
+        return Promise.resolve(false);
     }
 
 }
