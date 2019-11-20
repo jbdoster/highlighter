@@ -360,12 +360,12 @@ export class Displacement {
 
                 if (event.contentChanges[0].text === "\n") { // added line
 
-                    if (this.queues[highlights[i].name]) {
+                    if (this.queues[highlights[i].name]) { // exists in the matrix, add to itself
                         this.queues[highlights[i].name].push({
                             name: highlights[i].name,
-                            startLine: highlights[i].startLine + event.contentChanges[0].rangeLength,
+                            startLine: this.queues[highlights[i].name][i].startLine + event.contentChanges[0].rangeLength,
                             startChar: 0,
-                            endLine: highlights[i].endLine + event.contentChanges[0].rangeLength,
+                            endLine: this.queues[highlights[i].name][i].endLine + event.contentChanges[0].rangeLength,
                             endChar: 0,
                             uri: event.document.uri
                         } as DisplacedHighlight);
@@ -382,12 +382,12 @@ export class Displacement {
                 }
         
                 if (event.contentChanges[0].text === "") { // deleted line
-                    if (this.queues[highlights[i].name]) {
+                    if (this.queues[highlights[i].name]) { // exists in the matrix, subtract from itself
                         this.queues[highlights[i].name].push({
                             name: highlights[i].name,
-                            startLine: highlights[i].startLine - event.contentChanges[0].rangeLength,
+                            startLine: this.queues[highlights[i].name][i].startLine - event.contentChanges[0].rangeLength,
                             startChar: 0,
-                            endLine: highlights[i].endLine - event.contentChanges[0].rangeLength,
+                            endLine: this.queues[highlights[i].name][i].endLine - event.contentChanges[0].rangeLength,
                             endChar: 0,
                             uri: event.document.uri
                         } as DisplacedHighlight);
@@ -416,23 +416,23 @@ export class Displacement {
 
         if (!highlights) { return; }
 
-        for (var i in this.queues) {
-            for (var j in this.queues[i]) {
-                if (this.queues[i][j].uri === event.uri) {
-
-                    for (var k in highlights) {
-                        if (highlights[k].name === this.queues[i][j].name) {
-                            highlights[k]=
-                            Object.assign(
-                                highlights[k], this.queues[i][j]
-                            );
-                        }
+        Object.keys(this.queues).forEach(
+        (key: string) => {
+        for (var i in this.queues[key]) {
+            if (this.queues[key][i].uri === event.uri) {
+                if (!highlights) { break; }
+                for (var j in highlights) {
+                    if (highlights[j].name === this.queues[key][i].name) {
+                        highlights[j] =
+                        Object.assign(
+                            highlights[j], this.queues[key][i]
+                        );
                     }
-
-                    context.workspaceState.update('highlight-details', highlights);
-
                 }
+                context.workspaceState.update('highlight-details', highlights);
             }
+            delete this.queues[i];
         }
+        });
     }
 }
