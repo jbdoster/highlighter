@@ -2,7 +2,7 @@ import * as Constants from './Constants';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
-import { Highlight } from "./types";
+import { DisplacedHighlight, DisplacedHighlightsQueue, Highlight } from "./types";
 
 /**
  * @class Highlighter
@@ -108,20 +108,6 @@ export class Highlighter {
         });
         context.workspaceState.update('highlight-details', []);
         vscode.window.showInformationMessage('All your highlights have been removed');
-    }
-    // public async highlightFolder(context: vscode.ExtensionContext) {
-    //     if (!this.subscribed) {
-    //         this.__subscribe(context);
-    //     }
-    //     context.workspaceState.get('')
-    // }
-    /**
-     *  Adjust to user's changes displacing their saved highlights with 
-     *  carriage returns and full line deletions.
-     *  
-     */
-    private async __displacement() {
-
     }
 
     private async __handle_user_input(context: vscode.ExtensionContext, editor: vscode.TextEditor) {
@@ -334,4 +320,104 @@ export class Highlighter {
         return Promise.resolve(false);
     }
 
+}
+
+/**
+ *  Enqueue changes
+ *  Determine which highlights are affected.
+ *  Affected highlights are only below the change position.
+ *  Adjust each highlight accordingly.
+ * 
+ *  TLDR;
+ *  We only care about the last change per highlight.
+ *  We can choose to create a 2D matrix of 
+ *  [Highlight per DisplacedHighlight] or just update
+ *  an object of key Highlight name value Displaced Highlight
+ *  since collisions are not an issue, overwriting is preferred.
+ */
+export class Displacement {
+
+    private queues: DisplacedHighlightsQueue;
+
+    constructor() { 
+        this.queues = {"seed":[]};
+    }
+
+    public async enqueue(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
+
+        let highlights: Highlight[] | undefined =
+        context.workspaceState.get('highlight-details');
+
+        if (!highlights) { return; }
+
+        if (highlights.length < 1) { return; }
+
+        for (var i in highlights) {
+
+            if (highlights[i].startLine > event.contentChanges[0].range.end.line) { // highlight affected
+
+                if (event.contentChanges[0].text === "\n") { // added line
+
+                    if (this.queues[highlights[i].name]) {
+                        this.queues[highlights[i].name].push({
+                            name: highlights[i].name,
+                            startLine: highlights[i].startLine + event.contentChanges[0].rangeLength,
+                            startChar: 0,
+                            endLine: highlights[i].endLine + event.contentChanges[0].rangeLength,
+                            endChar: 0
+                        } as DisplacedHighlight);
+                    } else {
+                        this.queues[highlights[i].name] = [{
+                            name: highlights[i].name,
+                            startLine: highlights[i].startLine + event.contentChanges[0].rangeLength,
+                            startChar: 0,
+                            endLine: highlights[i].endLine + event.contentChanges[0].rangeLength,
+                            endChar: 0
+                        } as DisplacedHighlight];
+                    }
+                }
+        
+                if (event.contentChanges[0].text === "") { // deleted line
+                    if (this.queues[highlights[i].name]) {
+                        this.queues[highlights[i].name].push({
+                            name: highlights[i].name,
+                            startLine: highlights[i].startLine - event.contentChanges[0].rangeLength,
+                            startChar: 0,
+                            endLine: highlights[i].endLine - event.contentChanges[0].rangeLength,
+                            endChar: 0
+                        } as DisplacedHighlight);
+                    } else {
+                        this.queues[highlights[i].name] = [{
+                            name: highlights[i].name,
+                            startLine: highlights[i].startLine - event.contentChanges[0].rangeLength,
+                            startChar: 0,
+                            endLine: highlights[i].endLine - event.contentChanges[0].rangeLength,
+                            endChar: 0
+                        } as DisplacedHighlight];
+                    }
+                }
+
+            }
+
+            
+
+            
+        }
+
+        
+
+        // if () { // if undo and text comes back?
+
+        // }
+
+        // this.queues[] = 
+    }
+
+    private __dequeue() {
+
+    }
+
+    public async move(adjusted_highlights: Highlight[]) {
+        
+    }
 }

@@ -9,13 +9,23 @@ import {
 export interface Highlight {
     name: string;
     color: string;
-    range: Range;
     uri: Uri;
     location: Location;
     focusPosition: Position;
-    selection: Selection;
-    startLine: number;
-    startChar: number;
-    endLine: number;
-    endChar: number;
-};
+    startLine: number;    // adjusts
+    startChar: number;    // adjusts
+    endLine: number;      // adjusts
+    endChar: number;      // adjusts
+}
+
+export interface DisplacedHighlight {
+    name: string;
+    startLine: number;    // adjusts
+    startChar: number;    // adjusts
+    endLine: number;      // adjusts
+    endChar: number;      // adjusts
+}
+
+export interface DisplacedHighlightsQueue {
+    [key: string]: DisplacedHighlight[]; // "index type https://www.typescriptlang.org/docs/handbook/advanced-types.html#intersection-types"
+}
