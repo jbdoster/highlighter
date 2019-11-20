@@ -12,6 +12,10 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
+	vscode.workspace.onDidSaveTextDocument((event: vscode.TextDocument) => {
+		displacement.dequeue(context, event);
+	});
+
 	let highlightLines = vscode.commands.registerCommand('extension.highlightLines', () => {
 		highlighter.highlight_selection(context);
 	});

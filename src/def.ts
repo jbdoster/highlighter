@@ -340,7 +340,9 @@ export class Displacement {
     private queues: DisplacedHighlightsQueue;
 
     constructor() { 
-        this.queues = {"seed":[]};
+        this.queues = { // some key the user might never enter to initialize the matrix!
+            "f7d8sa7809f7ds809a7f90d-7-s-8-a-7-f-0-89ds7a0fuy8ds90ajhkfdhlasjfjklwhk":[]
+        };
     }
 
     public async enqueue(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
@@ -364,7 +366,8 @@ export class Displacement {
                             startLine: highlights[i].startLine + event.contentChanges[0].rangeLength,
                             startChar: 0,
                             endLine: highlights[i].endLine + event.contentChanges[0].rangeLength,
-                            endChar: 0
+                            endChar: 0,
+                            uri: event.document.uri
                         } as DisplacedHighlight);
                     } else {
                         this.queues[highlights[i].name] = [{
@@ -372,7 +375,8 @@ export class Displacement {
                             startLine: highlights[i].startLine + event.contentChanges[0].rangeLength,
                             startChar: 0,
                             endLine: highlights[i].endLine + event.contentChanges[0].rangeLength,
-                            endChar: 0
+                            endChar: 0,
+                            uri: event.document.uri
                         } as DisplacedHighlight];
                     }
                 }
@@ -384,7 +388,8 @@ export class Displacement {
                             startLine: highlights[i].startLine - event.contentChanges[0].rangeLength,
                             startChar: 0,
                             endLine: highlights[i].endLine - event.contentChanges[0].rangeLength,
-                            endChar: 0
+                            endChar: 0,
+                            uri: event.document.uri
                         } as DisplacedHighlight);
                     } else {
                         this.queues[highlights[i].name] = [{
@@ -392,32 +397,42 @@ export class Displacement {
                             startLine: highlights[i].startLine - event.contentChanges[0].rangeLength,
                             startChar: 0,
                             endLine: highlights[i].endLine - event.contentChanges[0].rangeLength,
-                            endChar: 0
+                            endChar: 0,
+                            uri: event.document.uri
                         } as DisplacedHighlight];
                     }
                 }
 
             }
-
-            
-
             
         }
 
-        
-
-        // if () { // if undo and text comes back?
-
-        // }
-
-        // this.queues[] = 
     }
 
-    private __dequeue() {
+    public async dequeue(context: vscode.ExtensionContext, event: vscode.TextDocument) {
 
-    }
+        let highlights: Highlight[] | undefined =
+        context.workspaceState.get('highlight-details');
 
-    public async move(adjusted_highlights: Highlight[]) {
-        
+        if (!highlights) { return; }
+
+        for (var i in this.queues) {
+            for (var j in this.queues[i]) {
+                if (this.queues[i][j].uri === event.uri) {
+
+                    for (var k in highlights) {
+                        if (highlights[k].name === this.queues[i][j].name) {
+                            highlights[k]=
+                            Object.assign(
+                                highlights[k], this.queues[i][j]
+                            );
+                        }
+                    }
+
+                    context.workspaceState.update('highlight-details', highlights);
+
+                }
+            }
+        }
     }
 }

@@ -24,6 +24,7 @@ export interface DisplacedHighlight {
     startChar: number;    // adjusts
     endLine: number;      // adjusts
     endChar: number;      // adjusts
+    uri: Uri;
 }
 
 export interface DisplacedHighlightsQueue {
