@@ -347,6 +347,9 @@ export class Displacement {
 
     public async enqueue(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
 
+        if (event.contentChanges.length < 1) { return; }
+
+
         let highlights: Highlight[] | undefined =
         context.workspaceState.get('highlight-details');
 
@@ -354,16 +357,22 @@ export class Displacement {
 
         if (highlights.length < 1) { return; }
 
-        for (var i in highlights) {
+        for (let i = 0; i < highlights.length; i++) {
 
             if (highlights[i].startLine > event.contentChanges[0].range.end.line) { // highlight affected
 
-                if (event.contentChanges[0].text === "\n") { // added line
-
+                if (event.contentChanges[0].text === "\n") { // added line(s)
                     if (this.queues[highlights[i].name]) { // exists in the matrix, add to itself
+
+                        for (let j = 0; j < this.queues[highlights[i].name].length; j++) {
+
+                            // if (this.queues[highlights[i].name][0].name === ) 
+                            // flat map instead? How to replace elements in each queue's array?
+
+                        }
                         this.queues[highlights[i].name].push({
                             name: highlights[i].name,
-                            startLine: this.queues[highlights[i].name][i].startLine + event.contentChanges[0].rangeLength,
+                            startLine: this.queues[highlights[i].name][i].startLine + (event.contentChanges[0].range.isSingleLine ? 1 : event.contentChanges[0].rangeLength),
                             startChar: 0,
                             endLine: this.queues[highlights[i].name][i].endLine + event.contentChanges[0].rangeLength,
                             endChar: 0,
@@ -381,7 +390,7 @@ export class Displacement {
                     }
                 }
         
-                if (event.contentChanges[0].text === "") { // deleted line
+                if (event.contentChanges[0].text === "") { // deleted line(s)
                     if (this.queues[highlights[i].name]) { // exists in the matrix, subtract from itself
                         this.queues[highlights[i].name].push({
                             name: highlights[i].name,
@@ -404,8 +413,14 @@ export class Displacement {
                 }
 
             }
+
+            // if(){} // TODO if deplete highlight??
+
+            // if(){} // TODO if whole highlight deleted??
             
         }
+
+        return Promise.resolve();
 
     }
 
@@ -431,8 +446,11 @@ export class Displacement {
                 }
                 context.workspaceState.update('highlight-details', highlights);
             }
-            delete this.queues[i];
+            delete this.queues[key][i];
         }
         });
+
+        return Promise.resolve();
+
     }
 }

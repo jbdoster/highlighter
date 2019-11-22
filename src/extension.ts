@@ -8,7 +8,7 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.workspace.onDidChangeTextDocument(
 	(event: vscode.TextDocumentChangeEvent) => {
 		if (event) {
-			// displacement.enqueue(event);
+			displacement.enqueue(context, event);
 		}
 	});
 
