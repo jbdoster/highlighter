@@ -340,9 +340,7 @@ export class Displacement {
     private queues: DisplacedHighlightsQueue;
 
     constructor() { 
-        this.queues = { // some key the user might never enter to initialize the matrix!
-            "f7d8sa7809f7ds809a7f90d-7-s-8-a-7-f-0-89ds7a0fuy8ds90ajhkfdhlasjfjklwhk":[]
-        };
+        this.queues = {};
     }
 
     public async enqueue(context: vscode.ExtensionContext, event: vscode.TextDocumentChangeEvent) {
@@ -361,54 +359,55 @@ export class Displacement {
 
             if (highlights[i].startLine > event.contentChanges[0].range.end.line) { // highlight affected
 
+                const offset = event.contentChanges[0].range.isSingleLine ? 1 : event.contentChanges[0].rangeLength;
+
                 if (event.contentChanges[0].text === "\n") { // added line(s)
-                    if (this.queues[highlights[i].name]) { // exists in the matrix, add to itself
 
-                        for (let j = 0; j < this.queues[highlights[i].name].length; j++) {
-
-                            // if (this.queues[highlights[i].name][0].name === ) 
-                            // flat map instead? How to replace elements in each queue's array?
-
-                        }
-                        this.queues[highlights[i].name].push({
+                    if (this.queues[highlights[i].name]) {
+                        this.queues[highlights[i].name] = {
                             name: highlights[i].name,
-                            startLine: this.queues[highlights[i].name][i].startLine + (event.contentChanges[0].range.isSingleLine ? 1 : event.contentChanges[0].rangeLength),
+                            startLine: this.queues[highlights[i].name].startLine + offset,
                             startChar: 0,
-                            endLine: this.queues[highlights[i].name][i].endLine + event.contentChanges[0].rangeLength,
+                            endLine: this.queues[highlights[i].name].endLine + offset,
                             endChar: 0,
                             uri: event.document.uri
-                        } as DisplacedHighlight);
+                        } as DisplacedHighlight;
                     } else {
-                        this.queues[highlights[i].name] = [{
+                        this.queues[highlights[i].name] = {
                             name: highlights[i].name,
-                            startLine: highlights[i].startLine + event.contentChanges[0].rangeLength,
+                            startLine: highlights[i].startLine + offset,
                             startChar: 0,
-                            endLine: highlights[i].endLine + event.contentChanges[0].rangeLength,
+                            endLine: highlights[i].endLine + offset,
                             endChar: 0,
                             uri: event.document.uri
-                        } as DisplacedHighlight];
+                        } as DisplacedHighlight;
                     }
+
+                    
                 }
         
                 if (event.contentChanges[0].text === "") { // deleted line(s)
-                    if (this.queues[highlights[i].name]) { // exists in the matrix, subtract from itself
-                        this.queues[highlights[i].name].push({
+
+                    const offset = event.contentChanges[0].range.isSingleLine ? 1 : event.contentChanges[0].rangeLength;
+                    
+                    if (this.queues[highlights[i].name]) {
+                        this.queues[highlights[i].name] = {
                             name: highlights[i].name,
-                            startLine: this.queues[highlights[i].name][i].startLine - event.contentChanges[0].rangeLength,
+                            startLine: this.queues[highlights[i].name].startLine - offset,
                             startChar: 0,
-                            endLine: this.queues[highlights[i].name][i].endLine - event.contentChanges[0].rangeLength,
+                            endLine: this.queues[highlights[i].name].endLine - offset,
                             endChar: 0,
                             uri: event.document.uri
-                        } as DisplacedHighlight);
+                        } as DisplacedHighlight;
                     } else {
-                        this.queues[highlights[i].name] = [{
+                        this.queues[highlights[i].name] = {
                             name: highlights[i].name,
-                            startLine: highlights[i].startLine - event.contentChanges[0].rangeLength,
+                            startLine: highlights[i].startLine - offset,
                             startChar: 0,
-                            endLine: highlights[i].endLine - event.contentChanges[0].rangeLength,
+                            endLine: highlights[i].endLine - offset,
                             endChar: 0,
                             uri: event.document.uri
-                        } as DisplacedHighlight];
+                        } as DisplacedHighlight;
                     }
                 }
 
@@ -431,24 +430,17 @@ export class Displacement {
 
         if (!highlights) { return; }
 
-        Object.keys(this.queues).forEach(
-        (key: string) => {
-        for (var i in this.queues[key]) {
-            if (this.queues[key][i].uri === event.uri) {
-                if (!highlights) { break; }
-                for (var j in highlights) {
-                    if (highlights[j].name === this.queues[key][i].name) {
-                        highlights[j] =
-                        Object.assign(
-                            highlights[j], this.queues[key][i]
-                        );
-                    }
+        for (var i in highlights) {
+            for (var j in this.queues) {
+                if (highlights[i].name === this.queues[j].name) {
+                    highlights[i] = Object.assign(highlights[i], this.queues[j]);
                 }
-                context.workspaceState.update('highlight-details', highlights);
             }
-            delete this.queues[key][i];
         }
-        });
+
+        context.workspaceState.update('highlight-details', highlights);
+
+        this.queues = {};
 
         return Promise.resolve();
 

@@ -28,5 +28,5 @@ export interface DisplacedHighlight {
 }
 
 export interface DisplacedHighlightsQueue {
-    [key: string]: DisplacedHighlight[]; // "index type https://www.typescriptlang.org/docs/handbook/advanced-types.html#intersection-types"
+    [key: string]: DisplacedHighlight; // "index type https://www.typescriptlang.org/docs/handbook/advanced-types.html#intersection-types"
 }
