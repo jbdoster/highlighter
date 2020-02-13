@@ -1,8 +1,10 @@
-import { DomainKey } from "@crqs/types";
+// import { DomainKey, ExtensionPath } from "@crqs/types";
+// import { ExtensionContext } from "vscode";
 import { MergedAggregates } from "@domain/MergedAggregates";
+import { WriteInput } from "@crqs/interfaces";
 
-interface Write<T extends MergedAggregates> {
-    cache (key: DomainKey, context: T): Promise<void>;
-    fs (key: DomainKey, context: T): Promise<void>;
-    workspace_state (key: DomainKey, context: T): Promise<void>;
+export interface WriteModel<T extends MergedAggregates> {
+    workspace_state (input: WriteInput<T>): Promise<void>;
+    workspace_global_state (input: WriteInput<T>): Promise<void>;
+    workspace_global_storage (input: WriteInput<T>): Promise<NodeJS.ErrnoException | void>;
 }
