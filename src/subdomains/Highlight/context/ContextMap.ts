@@ -1,6 +1,6 @@
 import { CqrsOp } from "@shared/types";
 
-import { Location, Position, Range, Selection, Uri } from "vscode";
+import { commands, Location, Position, Range, Selection, Uri } from "vscode";
 
 type HighlightColorHex = string;
 type HighlightColorName = string;
@@ -37,15 +37,17 @@ export type Context = {
     highlight: Highlight;
 };
 
-export enum HighlightCommands {
-    ADD,
-    FIND,
-    REMOVE,
-    REMOVE_ALL
+export enum Commands {
+    ADD = "extension.highlightLines",
+    FIND = "extension.findHighlight",
+    REMOVE = "extension.removeHighlight",
+    REMOVE_ALL = "extension.removeAllHighlights"
 }
 
+export type Registrar = Function;
+
 export type HighlightEvent = {
-    command: HighlightCommands;
+    command: Commands;
     context: Context;
     cqrs_op: CqrsOp;
 };
