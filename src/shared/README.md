@@ -1,0 +1,2 @@
+Each file name represents the Bounded Context we are defining types for
+- Example, "Highlight.ts" regards the Bounded Context of the user commanding to do something with a Highlight. This could be "adding" one, removing one or all of them, "finding" one, . . .

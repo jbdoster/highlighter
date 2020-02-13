@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { PageHighlighter } from './def';
+import { PageHighlighter } from './old/def';
 export function activate(context: vscode.ExtensionContext) {
 	let highlighter: PageHighlighter = new PageHighlighter();
 	let highlightLines = vscode.commands.registerCommand('extension.highlightLines', () => {
