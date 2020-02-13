@@ -1,28 +1,32 @@
 import { Location, Position, Range, Selection, Uri } from "vscode";
 
-type HighlightColor = string;
-type HighlightEndLine = number;
+type HighlightColorHex = string;
+type HighlightColorName = string;
+type HighlightColor = {
+    HighlightColorHex: HighlightColorHex,
+    HighlightColorName: HighlightColorName
+};
 type HighlightEndChar = number;
-type HighlightHex = string;
+type HighlightEndLine = number;
 type HighlightLocation = Location;
 type HighlightName = string;
 type HighlightPosition = Position;
 type HighlightRange = Range;
 type HighlightSelection = Selection;
-type HighlightStartLine = number;
 type HighlightStartChar = number;
+type HighlightStartLine = number;
 type HighlightUri = Uri;
 
-type Highlight = {
-    name: HighlightName,
-    color: HighlightHex,
-    range: HighlightRange,
-    uri: HighlightUri,
-    location: HighlightLocation,
-    focusPosition: HighlightPosition,
-    selection: HighlightSelection,
-    startLine: HighlightStartLine,
-    startChar: HighlightStartChar,
-    endLine: HighlightEndLine,
+export type Highlight = {
+    color: HighlightColor,
     endChar: HighlightEndChar
-}
+    endLine: HighlightEndLine,
+    location: HighlightLocation,
+    name: HighlightName,
+    position: HighlightPosition,
+    range: HighlightRange,
+    selection: HighlightSelection,
+    startChar: HighlightStartChar,
+    startLine: HighlightStartLine,
+    uri: HighlightUri,
+};
