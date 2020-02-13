@@ -1,5 +1,6 @@
-import { Location, Position, Range, Selection, Uri, EventEmitter } from "vscode";
 import { CqrsOp } from "@shared/types";
+
+import { Location, Position, Range, Selection, Uri } from "vscode";
 
 type HighlightColorHex = string;
 type HighlightColorName = string;
@@ -18,14 +19,7 @@ type HighlightStartChar = number;
 type HighlightStartLine = number;
 type HighlightUri = Uri;
 
-export enum HighlightCommands {
-    ADD,
-    FIND,
-    REMOVE,
-    REMOVE_ALL
-}
-
-export type HighlightContext = {
+export type Highlight = {
     color: HighlightColor,
     endChar: HighlightEndChar
     endLine: HighlightEndLine,
@@ -39,9 +33,19 @@ export type HighlightContext = {
     uri: HighlightUri,
 };
 
-export type HighlightEvent = {
-    command: HighlightCommands;
-    highlight: HighlightContext;
-    cqrs_op: CqrsOp;
+export type Context = {
+    highlight: Highlight;
 };
 
+export enum HighlightCommands {
+    ADD,
+    FIND,
+    REMOVE,
+    REMOVE_ALL
+}
+
+export type HighlightEvent = {
+    command: HighlightCommands;
+    context: Context;
+    cqrs_op: CqrsOp;
+};

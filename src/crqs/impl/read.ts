@@ -1,11 +1,11 @@
 // import { DomainKey, ExtensionPath } from "@crqs/types";
+import { BoundedContexts } from "@shared/types";
 import { ExtensionContext } from "vscode";
 import { ReadModel } from "@crqs/abstract/read";
-import { MergedAggregates } from "@domain/MergedAggregates";
 import { ReadInput } from "@crqs/interfaces";
 import { readFile } from "fs";
 
-class Read<T extends MergedAggregates> implements ReadModel<T> {
+class Read<T extends BoundedContexts> implements ReadModel<T> {
     constructor() {}
     workspace (input: ReadInput): Promise<T> | undefined {
         return input.extension_context.globalState.get(input.key);

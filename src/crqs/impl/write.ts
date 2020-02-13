@@ -1,7 +1,7 @@
 // import { DomainKey, ExtensionPath, GlobalStoragePath } from "@crqs/types";
 // import { ExtensionContext } from "vscode";
 import { WriteModel } from "@crqs/abstract/write";
-import { MergedAggregates } from "@domain/MergedAggregates";
+import { MergedAggregates } from "@shared/MergedAggregates";
 import { WriteInput } from "@crqs/interfaces";
 import { writeFile, write } from "fs";
 

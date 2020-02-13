@@ -1,6 +1,6 @@
 import { DomainKey } from "./types";
 import { ExtensionContext } from "vscode";
-import { MergedAggregates } from "@domain/MergedAggregates";
+import { MergedAggregates } from "@shared/MergedAggregates";
 
 export interface ReadInput {
     extension_context: ExtensionContext;

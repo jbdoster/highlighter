@@ -1,7 +1,7 @@
 import { Event } from "vscode";
-import { HighlightEvent, HighlightContext } from "@domain/Highlight/context";
+import { Context } from "src/subdomains/Highlight/ContextMap";
 
-export interface HighlightAggregateRoot<T extends HighlightEvent | HighlightContext> {
+export interface Gateway<T extends Context> {
     events_: Event<T>;
     add (event: T): Promise<void>;
     find (event: T): Promise<T>;
