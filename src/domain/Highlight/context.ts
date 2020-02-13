@@ -25,7 +25,7 @@ export enum HighlightCommands {
     REMOVE_ALL
 }
 
-export type Highlight = {
+export type HighlightContext = {
     color: HighlightColor,
     endChar: HighlightEndChar
     endLine: HighlightEndLine,
@@ -41,7 +41,7 @@ export type Highlight = {
 
 export type HighlightEvent = {
     command: HighlightCommands;
-    highlight: Highlight;
+    highlight: HighlightContext;
     cqrs_op: CqrsOp;
 };
 

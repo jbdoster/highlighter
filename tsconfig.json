@@ -8,6 +8,7 @@
 		"outDir": "out",
 		"paths": {
 			"@application/*": ["src/services/*"],
+			"@crqs/*": ["src/crqs/*"],
 			"@domain/*": ["src/domain/*"],
 			"@read/*": ["src/read/*"],
 			"@resources/*": ["src/resources/*"],

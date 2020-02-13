@@ -1,7 +1,7 @@
 import { Event } from "vscode";
-import { HighlightEvent, Highlight } from "@domain/Highlight/context";
+import { HighlightEvent, HighlightContext } from "@domain/Highlight/context";
 
-export interface HighlightAggregateRoot<T extends HighlightEvent | Highlight> {
+export interface HighlightAggregateRoot<T extends HighlightEvent | HighlightContext> {
     events_: Event<T>;
     add (event: T): Promise<void>;
     find (event: T): Promise<T>;
