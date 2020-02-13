@@ -1,5 +1,5 @@
-import { DomainKey, ExtensionPath } from "@crqs/types";
-import { ExtensionContext } from "vscode";
+// import { DomainKey, ExtensionPath } from "@crqs/types";
+// import { ExtensionContext } from "vscode";
 import { MergedAggregates } from "@domain/MergedAggregates";
 import { ReadInput } from "@crqs/interfaces";
 
