@@ -30,3 +30,30 @@ export type DecoratableItem = { // Highlight, font section, etc.
     startLine: TStartLine,
     uri: TUri,
 };
+
+export type StoreableItem = {
+    color: TColor,
+    endChar: TEndChar
+    endLine: TEndLine,
+    location: TLocation,
+    name: TName,
+    position: TPosition,
+    range: TRange,
+    selection: TSelection,
+    startChar: TStartChar,
+    startLine: TStartLine,
+    uri: TUri,
+};
+export type LoadableItem = {
+    color: TColor,
+    endChar: TEndChar
+    endLine: TEndLine,
+    location: TLocation,
+    name: TName,
+    position: TPosition,
+    range: TRange,
+    selection: TSelection,
+    startChar: TStartChar,
+    startLine: TStartLine,
+    uri: TUri,
+};

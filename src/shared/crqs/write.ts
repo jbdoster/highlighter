@@ -1,38 +1,35 @@
-// import { DomainKey, ExtensionPath } from "@crqs/types";
-// import { ExtensionContext } from "vscode";
-import { BoundedContexts } from "@shared/types";
 import { writeFile } from "fs";
 import { DomainKey } from "./types";
 import { ExtensionContext } from "vscode";
+import { StoreableItem } from "@shared/DomainContext";
 
-export interface WriteInput<T extends MergedAggregates> {
-    aggregate: T;
+export interface WriteInput {
     extension_context: ExtensionContext;
-    key: DomainKey;
+    item: StoreableItem;
 }
 
-export interface WriteModel<C extends BoundedContexts> {
-    workspace_state (input: WriteInput<C>): Promise<void>;
-    workspace_global_state (input: WriteInput<C>): Promise<void>;
-    workspace_global_storage (input: WriteInput<C>): Promise<NodeJS.ErrnoException | void>;
+export interface WriteModel<T extends StoreableItem> {
+    workspace_state (context: ExtensionContext, input: T): Promise<void>;
+    workspace_global_state (context: ExtensionContext, input: T): Promise<void>;
+    workspace_global_storage (context: ExtensionContext, input: T): Promise<NodeJS.ErrnoException | void>;
 }
 
-class Write<T extends MergedAggregates> implements WriteModel<T> {
+class Write<T extends StoreableItem> implements WriteModel<T> {
     constructor() {}
-    async workspace_state (input: WriteInput<T>): Promise<void> {
-        input.extension_context.workspaceState.update(input.key, input.aggregate);
+    async workspace_state (context: ExtensionContext, item: T): Promise<void> {
+        context.workspaceState.update(item.name, item);
         return undefined;
     }
-    async workspace_global_state (input: WriteInput<T>): Promise<void> {
-        input.extension_context.globalState.update(input.key, input.aggregate);
+    async workspace_global_state (context: ExtensionContext, item: T): Promise<void> {
+        context.globalState.update(item.name, item);
         return undefined;
     }
-    async workspace_global_storage (input: WriteInput<T>): Promise<NodeJS.ErrnoException | void> {
+    async workspace_global_storage (context: ExtensionContext, item: T): Promise<NodeJS.ErrnoException | void> {
         return new Promise(
         (resolve, reject) => {
             writeFile(
-                input.extension_context.globalStoragePath, 
-                input.aggregate,
+                context.globalStoragePath, 
+                item.name,
                 function(err: NodeJS.ErrnoException | null) {
                 if (err) {
                     return reject(err);

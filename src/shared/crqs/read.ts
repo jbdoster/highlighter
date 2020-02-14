@@ -1,32 +1,32 @@
-import { BoundedContexts } from "@shared/types";
 import { readFile } from "fs";
 import { DomainKey } from "./types";
 import { ExtensionContext } from "vscode";
+import { LoadableItem } from "@shared/DomainContext";
 
 export interface ReadInput {
     extension_context: ExtensionContext;
-    key: DomainKey;
+    item: LoadableItem;
 }
 
-export interface ReadModel<C extends BoundedContexts> {
-    workspace (input: ReadInput): Promise<C> | undefined;
-    workspace_global_state (input: ReadInput): Promise<C> | undefined;
-    workspace_global_storage (input: ReadInput): Promise<C> | undefined;
+export interface ReadModel<T extends LoadableItem> {
+    workspace (input: ReadInput): Promise<T> | undefined;
+    workspace_global_state (input: ReadInput): Promise<T> | undefined;
+    workspace_global_storage (input: ReadInput): Promise<T> | undefined;
 }
 
-class Read<T extends BoundedContexts> implements ReadModel<T> {
+class Read<T extends LoadableItem> implements ReadModel<T> {
     constructor() {}
     workspace (input: ReadInput): Promise<T> | undefined {
-        return input.extension_context.globalState.get(input.key);
+        return input.extension_context.globalState.get(input.item.name);
     }
     workspace_global_state (input: ReadInput): Promise<T> | undefined {
-        return input.extension_context.globalState.get(input.key);
+        return input.extension_context.globalState.get(input.item.name);
     }
     workspace_global_storage (input: ReadInput): Promise<T> | undefined {
         return new Promise(
             (resolve, reject) => {
                 readFile(
-                    input.extension_context.globalStoragePath,
+                    input.extension_context.globalStoragePath + input.item.name,
                     function(err: NodeJS.ErrnoException | null, data: Buffer) {
                     if (err) {
                         return reject(err);

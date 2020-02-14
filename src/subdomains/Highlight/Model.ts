@@ -1,7 +1,7 @@
 // import { Gateway } from "@subdomains/Highlight/context/Model";
-import { Commands, Context, Highlight, HighlightEvent } from "@subdomains/Highlight/ContextMap";
+import { Commands, Context, Highlight, HighlightEvent } from "@subdomains/Highlight/Context";
 import { Memento } from "vscode";
-import { CQRS } from "@shared/types";
+import { CQRS } from "@shared/DomainContext";
 
 export interface Gateway<E extends HighlightEvent<Memento>> {
     add (event: E): Promise<void>;

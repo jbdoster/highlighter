@@ -1,4 +1,4 @@
-import { Entity } from "@shared/types";
+import { Entity } from "@shared/DomainContext";
 
 class Decorator {
     constructor(entities: Entity[]) {
