@@ -1,13 +1,32 @@
-// import { Location, Position, Range, Selection, Uri, EventEmitter, TextEditor } from "vscode";
-import * as HighlightDomain from "@subdomains/Highlight/ContextMap";
+import { Location, Position, Range, Selection, Uri } from "vscode";
 
-export enum CqrsOp {
-    READ = "read",
-    WRITE = "write"
-}
+type TColorHex = string;
+type TColorName = string;
+type TColor = {
+    TColorHex: TColorHex,
+    ColorName: TColorName
+};
+type TEndChar = number;
+type TEndLine = number;
+type TLocation = Location;
+type TName = string;
+type TPosition = Position;
+type TRange = Range;
+type TSelection = Selection;
+type TStartChar = number;
+type TStartLine = number;
+type TUri = Uri;
 
-export enum Domain {
-    HIGHLIGHT = "Highlight"
-}
-
-export type BoundedContexts = HighlightDomain.Context; // | Font | etc.
+export type DecoratableItem = { // Highlight, font section, etc.
+    color: TColor,
+    endChar: TEndChar
+    endLine: TEndLine,
+    location: TLocation,
+    name: TName,
+    position: TPosition,
+    range: TRange,
+    selection: TSelection,
+    startChar: TStartChar,
+    startLine: TStartLine,
+    uri: TUri,
+};

@@ -1,9 +1,21 @@
-// import { DomainKey, ExtensionPath, GlobalStoragePath } from "@crqs/types";
+// import { DomainKey, ExtensionPath } from "@crqs/types";
 // import { ExtensionContext } from "vscode";
-import { WriteModel } from "@crqs/abstract/write";
-import { MergedAggregates } from "@shared/MergedAggregates";
-import { WriteInput } from "@crqs/interfaces";
-import { writeFile, write } from "fs";
+import { BoundedContexts } from "@shared/types";
+import { writeFile } from "fs";
+import { DomainKey } from "./types";
+import { ExtensionContext } from "vscode";
+
+export interface WriteInput<T extends MergedAggregates> {
+    aggregate: T;
+    extension_context: ExtensionContext;
+    key: DomainKey;
+}
+
+export interface WriteModel<C extends BoundedContexts> {
+    workspace_state (input: WriteInput<C>): Promise<void>;
+    workspace_global_state (input: WriteInput<C>): Promise<void>;
+    workspace_global_storage (input: WriteInput<C>): Promise<NodeJS.ErrnoException | void>;
+}
 
 class Write<T extends MergedAggregates> implements WriteModel<T> {
     constructor() {}

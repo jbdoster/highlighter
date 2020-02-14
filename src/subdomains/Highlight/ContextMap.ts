@@ -1,7 +1,11 @@
-import { CqrsOp } from "@shared/types";
+import { CqrsOp, BoundedContexts } from "@shared/types";
+import Read from "@shared/crqs/read";
+import Write from "@shared/crqs/write";
+import { Location, Memento, Position, Range, Selection, Uri } from "vscode";
 
-import { commands, Location, Position, Range, Selection, Uri } from "vscode";
-
+type Key = string;
+type EventName = string;
+type Finder<T extends Memento> = T;
 type HighlightColorHex = string;
 type HighlightColorName = string;
 type HighlightColor = {
@@ -33,9 +37,10 @@ export type Highlight = {
     uri: HighlightUri,
 };
 
-export type Context = {
-    highlight: Highlight;
-};
+// export type Context = {
+//     highlight: Highlight;
+//     key: Key;
+// };
 
 export enum Commands {
     ADD = "extension.highlightLines",
@@ -46,8 +51,9 @@ export enum Commands {
 
 export type Registrar = Function;
 
-export type HighlightEvent = {
-    command: Commands;
-    context: Context;
-    cqrs_op: CqrsOp;
+export type HighlightEvent<T extends BoundedContexts | Memento> = {
+    event_name: EventName;
+    read: Read<T>; // cqrs
+    write: Write<T>; // cqrs
+    finder: Finder<T>; // wrap workspace data getters
 };

@@ -1,9 +1,18 @@
-// import { DomainKey, ExtensionPath } from "@crqs/types";
 import { BoundedContexts } from "@shared/types";
-import { ExtensionContext } from "vscode";
-import { ReadModel } from "@crqs/abstract/read";
-import { ReadInput } from "@crqs/interfaces";
 import { readFile } from "fs";
+import { DomainKey } from "./types";
+import { ExtensionContext } from "vscode";
+
+export interface ReadInput {
+    extension_context: ExtensionContext;
+    key: DomainKey;
+}
+
+export interface ReadModel<C extends BoundedContexts> {
+    workspace (input: ReadInput): Promise<C> | undefined;
+    workspace_global_state (input: ReadInput): Promise<C> | undefined;
+    workspace_global_storage (input: ReadInput): Promise<C> | undefined;
+}
 
 class Read<T extends BoundedContexts> implements ReadModel<T> {
     constructor() {}
