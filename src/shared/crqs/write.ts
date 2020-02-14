@@ -1,5 +1,5 @@
 import { writeFile } from "fs";
-import { DomainKey } from "./types";
+import { TDomainKey } from "@shared/DomainContext";
 import { ExtensionContext } from "vscode";
 import { StoreableItem } from "@shared/DomainContext";
 

@@ -1,5 +1,5 @@
 import { readFile } from "fs";
-import { DomainKey } from "./types";
+import { TDomainKey } from "@shared/DomainContext";
 import { ExtensionContext } from "vscode";
 import { LoadableItem } from "@shared/DomainContext";
 

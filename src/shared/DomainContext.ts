@@ -1,5 +1,9 @@
-import { Location, Position, Range, Selection, Uri } from "vscode";
+import { Location, Position, Range, Selection, Uri, Event } from "vscode";
 
+/** Built-in Wrap */
+export type TLiteral = string | Buffer | Symbol;
+
+/** Ubiquity */
 type TColorHex = string;
 type TColorName = string;
 type TColor = {
@@ -57,3 +61,10 @@ export type LoadableItem = {
     startLine: TStartLine,
     uri: TUri,
 };
+
+export type TItem = DecoratableItem | LoadableItem | StoreableItem;
+export type TDomainKey = TLiteral;
+type TEvent<T extends TItem> = {
+    items: T[];
+};
+export type DomainEvent<T extends TItem> = TEvent<T> | Event<T>;

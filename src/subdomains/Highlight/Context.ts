@@ -1,6 +1,6 @@
 import Read from "@shared/crqs/read";
 import Write from "@shared/crqs/write";
-import { DecoratableItem, StoreableItem, LoadableItem } from "@shared/DomainContext";
+import { DecoratableItem, StoreableItem, LoadableItem, TItem } from "@shared/DomainContext";
 
 export enum Commands {
     ADD = "extension.highlightLines",
