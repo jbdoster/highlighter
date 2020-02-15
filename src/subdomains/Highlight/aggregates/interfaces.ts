@@ -1,15 +1,14 @@
-import { DomainEvent } from "@shared/DomainContext";
-import { TItem } from "@shared/DomainContext";
+import { Event, EventBus } from "@shared/types";
 
-export interface IHighlightAggregateAdd<D extends DomainEvent<TItem>> { // IDomainAggregateFunctionality
-    exec(event: D): Promise<void>;
+export interface IHighlightAggregateAdd<E extends Event<EventBus>> {
+    exec(event: E): Promise<void>;
 }
-export interface IHighlightAggregateFind<D> {
-    exec(event: D): Promise<TItem | undefined>;
+export interface IHighlightAggregateFind<E extends Event<EventBus>> {
+    exec(event: E): Promise<E | undefined>;
 }
-export interface IHighlightAggregateRemove<D> {
-    exec(event: D): Promise<void>;
+export interface IHighlightAggregateRemove<E extends Event<EventBus>> {
+    exec(event: E): Promise<void>;
 }
-export interface IHighlightAggregateRemoveAll<D> {
-    exec(event: D): Promise<void>;
+export interface IHighlightAggregateRemoveAll<E extends Event<EventBus>> {
+    exec(event: E): Promise<void>;
 }

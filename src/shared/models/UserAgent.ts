@@ -1,3 +1,0 @@
-class UserAgent {
-    constructor() {}
-}

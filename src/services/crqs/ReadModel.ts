@@ -1,26 +1,30 @@
 import { readFile } from "fs";
-import { TDomainKey } from "@shared/DomainContext";
 import { ExtensionContext } from "vscode";
-import { LoadableItem } from "@shared/DomainContext";
+import { EventBus } from "@shared/types";
 
 export interface ReadInput {
     extension_context: ExtensionContext;
-    item: LoadableItem;
+    items: EventBus;
 }
 
-export interface ReadModel<T extends LoadableItem> {
+export interface ReadModel<T extends EventBus> {
     workspace (input: ReadInput): Promise<T> | undefined;
     workspace_global_state (input: ReadInput): Promise<T> | undefined;
     workspace_global_storage (input: ReadInput): Promise<T> | undefined;
 }
 
-class Read<T extends LoadableItem> implements ReadModel<T> {
+class Read<T extends EventBus> implements ReadModel<T> {
     constructor() {}
-    workspace (input: ReadInput): Promise<T> | undefined {
-        return input.extension_context.globalState.get(input.item.name);
+    workspace (input: ReadInput): Promise<T> | undefined { // TODO handle batches
+        const batch: T | undefined = [];
+        for (const item of input.items) {
+            batch.push(
+                input.extension_context.globalState.get(item.);
+            );
+        }
     }
     workspace_global_state (input: ReadInput): Promise<T> | undefined {
-        return input.extension_context.globalState.get(input.item.name);
+        return input.extension_context.globalState.get(input.item.id);
     }
     workspace_global_storage (input: ReadInput): Promise<T> | undefined {
         return new Promise(

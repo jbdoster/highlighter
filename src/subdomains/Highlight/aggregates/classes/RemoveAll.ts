@@ -1,7 +1,8 @@
-import { TItem, DomainEvent } from "@shared/DomainContext";
-import { IHighlightAggregateRemoveAll } from "@subdomains/Highlight/aggregates/interfaces";
-class RemoveAll<D extends DomainEvent<TItem>> implements IHighlightAggregateRemoveAll<D> {
-    async exec(event: D) {
+import { Event, EventBus } from "@shared/types";
+import { IHighlightAggregateAdd } from "../interfaces";
+
+class RemoveAll<E extends Event<EventBus>> implements IHighlightAggregateAdd<E> {    
+    async exec(event: E) {
         return Promise.resolve(undefined);
     }
 }

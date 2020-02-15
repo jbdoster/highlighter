@@ -1,7 +1,8 @@
-import { TItem, DomainEvent } from "@shared/DomainContext";
-import { IHighlightAggregateFind } from "@subdomains/Highlight/aggregates/interfaces";
-class Find<D extends DomainEvent<TItem>> implements IHighlightAggregateFind<D> {
-    async exec(event: D) {
+import { Event, EventBus } from "@shared/types";
+import { IHighlightAggregateAdd } from "../interfaces";
+
+class Find<E extends Event<EventBus>> implements IHighlightAggregateAdd<E> {
+    async exec(event: E) {
         return Promise.resolve(undefined);
     }
 }

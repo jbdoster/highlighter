@@ -1,9 +1,8 @@
-import { Entity } from "@shared/DomainContext";
+import { EventBus, DecoratableItem } from "@shared/types";
 
 class Decorator {
-    constructor(entities: Entity[]) {
-        for (const entity of entities) {
-
+    constructor(decorations: EventBus) {
+        for (const decoration of decorations) {
         }
     }
 }
