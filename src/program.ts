@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
-import { Selection, DecorationRenderOptions, QuickPickItem, QuickPick, window, ExtensionContext } from "vscode";
+import { Selection, DecorationRenderOptions, QuickPickItem, QuickPick, window, ExtensionContext, InputBox, QuickInputButton, Uri } from "vscode";
+import { readdirSync } from "fs";
 
 export enum UserCommands {
     HIGHLIGHT = "extension.highlightSelection",
@@ -11,55 +12,118 @@ export enum UserCommands {
 export type Picker = QuickPick<QuickPickItem>;
 export type Preferences = {};
 
-export type Style = DecorationRenderOptions;
-export type Decoration = {
-    selection: Selection;
-    style: Style;
-};
-
-export interface EventMessage {
-    decoration: Decoration;
+export interface Style extends DecorationRenderOptions {}
+export interface CommandMessage {
     event: any;
+    style: Style;
 }
 
-export const COLORS_PATH = 'resources/imgs/colors-picker/';
-
 abstract class Base {
+    
+    protected base_dir: string;
+    protected colors_path: string;
+    protected colors_dir_files: string[];
     private preferences: Preferences;
-    constructor() {
+
+    constructor(context: ExtensionContext) {
+
+        this.base_dir = context.extensionPath;
+        this.colors_path = "src/resources/imgs/colors-picker";
+        this.colors_dir_files = readdirSync(`${this.base_dir}/${this.colors_path}`);
+
         this.preferences = {};
     }
 }
 
 abstract class Agent extends Base {
 
+    protected color_buttons: QuickInputButton[]; 
+    protected color_picker: QuickPick<QuickPickItem>;
     protected context: ExtensionContext;
     protected emitter: EventEmitter;
-    protected picker: Picker; 
+    protected _input_box: InputBox;
 
     constructor(context: ExtensionContext, registrar: Function) {
         
-        super();
+        super(context);
 
         this.context = context;
         this.emitter = new EventEmitter();
         this.emitter.emit.bind(this);
 
-        this.picker = window.createQuickPick();
+        this.color_picker = window.createQuickPick<QuickPickItem>();
+        this.color_picker.canSelectMany = false;
+        this.color_picker.placeholder = 'Pick a color';
 
+        this.color_buttons = [];
+        for (const i in this.colors_dir_files) {
+            this.color_buttons.push({
+                iconPath: Uri.file(`${this.base_dir}${this.colors_path}${this.colors_dir_files[i]}`)
+            });
+            if (Number(i) === this.colors_dir_files.length - 1) {
+                this.color_picker.buttons = this.color_buttons;
+            }
+        }
+
+        this._input_box = window.createInputBox();
+        this._input_box.onDidAccept.bind(this);
+        
         registrar(
-            UserCommands.HIGHLIGHT, 
-            (event: any) => {
-                this.emitter.emit(
-                    UserCommands.HIGHLIGHT,
-                    event
-                );
+            UserCommands.HIGHLIGHT,
+            () => {
+                this._workflow_highlight();
             }
         );
 
     }
-    protected respond(event: any) {
-        console.log(event);
+    private async _request_color(): Promise<string> {
+        this.color_picker.show();
+        return new Promise((resolve) => {
+            this.color_picker.onDidTriggerButton(function (this: Agent, selection: any) {
+                this.color_picker.dispose();
+                resolve(
+                    selection.iconPath.path
+                    .replace(
+                        `${this.base_dir}/${this.colors_path}`, 
+                        ''
+                    ).replace('.png', '')
+                );
+            });
+        });
+    }
+    private _request_text(title: string): Promise<string> {
+        this._input_box.title = title;
+        this._input_box.show();
+        return new Promise((resolve) => {
+            this._input_box.onDidAccept(function(this: Agent) {
+                resolve(this._input_box.value);
+            }.bind(this));
+        });
+    }
+    private async _workflow_highlight() {
+
+        const value: string =
+        await this._request_text("Give a name for this highlight to find it again!");
+        const hex: string =
+        await this._request_color();
+
+        this.emitter.emit(
+            UserCommands.HIGHLIGHT,
+            {
+                event: {
+                    name: value,
+                },
+                style: {
+                    isWholeLine: true,
+                    light: {
+                        backgroundColor: `#${hex}`,
+                    },
+                    dark: {
+                        backgroundColor: `#${hex}`,
+                    },
+                }
+            } as CommandMessage
+        );
     }
 }
 
@@ -67,8 +131,8 @@ abstract class DecorationTool extends Agent {
     constructor(context: ExtensionContext, registrar: Function) {
         super(context, registrar);
     }
-    decorate(event: any) {
-        console.log(event);
+    decorate(style: Style) {
+        console.log(style);
     }
 }
 
@@ -78,6 +142,6 @@ export class Highlighter extends DecorationTool {
         this.emitter.addListener(UserCommands.HIGHLIGHT, this.decorate);
     }
     decorate(event: any) {
-        event;
+        const e = event;
     }
 }
