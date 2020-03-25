@@ -5,18 +5,21 @@
 			"es6"
 		],
 		"module": "commonjs",
-		"outDir": "out",
+		"outDir": "./dist",
 		"paths": {
 			"@application/*": ["src/controllers/*"],
-			"@crqs/*": ["src/services/crqs/*"],
+			"@crqs/*": ["src/aggregates/crqs/*"],
 			"@read/*": ["src/read/*"],
 			"@resources/*": ["src/resources/*"],
 			"@shared/*": ["src/shared/*"],
-			"@subdomains/*": ["src/subdomains/*"], 
+			"@subdomains/*": ["src/subdomains/*"],
+			"@src/*": ["src/*"],
 			"@write/*": ["src/write/*"]
 		},
-		"rootDir": "src",
+		"rootDir": "./",
 		"sourceMap": true,
+		"esModuleInterop": true,
+		"mapRoot": "dist",
 		"strict": true,   /* enable all strict type-checking options */
 		"target": "es6",
 		/* Additional Checks */
