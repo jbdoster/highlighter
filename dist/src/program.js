@@ -21,8 +21,8 @@ var UserCommands;
 class Base {
     constructor(context) {
         this.base_dir = context.extensionPath;
-        this.colors_path = "src/resources/imgs/colors-picker";
-        this.colors_dir_files = fs_1.readdirSync(`${this.base_dir}/${this.colors_path}`);
+        this.colors_path = "/src/resources/imgs/colors-picker/";
+        this.colors_dir_files = fs_1.readdirSync(`${this.base_dir}${this.colors_path}`);
         this.preferences = {};
     }
 }
@@ -32,6 +32,7 @@ class Agent extends Base {
         this.context = context;
         this.emitter = new events_1.EventEmitter();
         this.emitter.emit.bind(this);
+        this._request_color.bind(this);
         this.color_picker = vscode_1.window.createQuickPick();
         this.color_picker.canSelectMany = false;
         this.color_picker.placeholder = 'Pick a color';
@@ -55,10 +56,10 @@ class Agent extends Base {
             this.color_picker.show();
             return new Promise((resolve) => {
                 this.color_picker.onDidTriggerButton(function (selection) {
-                    this.color_picker.dispose();
+                    // this.color_picker.dispose();
                     resolve(selection.iconPath.path
-                        .replace(`${this.base_dir}/${this.colors_path}`, '').replace('.png', ''));
-                });
+                        .replace(`${this.base_dir}${this.colors_path}`, '').replace('.png', ''));
+                }.bind(this));
             });
         });
     }

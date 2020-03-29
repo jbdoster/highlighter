@@ -11,10 +11,12 @@ export enum UserCommands {
 
 export type Picker = QuickPick<QuickPickItem>;
 export type Preferences = {};
-
+export interface Event {
+    name: string;
+}
 export interface Style extends DecorationRenderOptions {}
 export interface CommandMessage {
-    event: any;
+    event: Event;
     style: Style;
 }
 
@@ -28,8 +30,8 @@ abstract class Base {
     constructor(context: ExtensionContext) {
 
         this.base_dir = context.extensionPath;
-        this.colors_path = "src/resources/imgs/colors-picker";
-        this.colors_dir_files = readdirSync(`${this.base_dir}/${this.colors_path}`);
+        this.colors_path = "/src/resources/imgs/colors-picker/";
+        this.colors_dir_files = readdirSync(`${this.base_dir}${this.colors_path}`);
 
         this.preferences = {};
     }
@@ -51,10 +53,10 @@ abstract class Agent extends Base {
         this.emitter = new EventEmitter();
         this.emitter.emit.bind(this);
 
+        this._request_color.bind(this);
         this.color_picker = window.createQuickPick<QuickPickItem>();
         this.color_picker.canSelectMany = false;
         this.color_picker.placeholder = 'Pick a color';
-
         this.color_buttons = [];
         for (const i in this.colors_dir_files) {
             this.color_buttons.push({
@@ -80,15 +82,15 @@ abstract class Agent extends Base {
         this.color_picker.show();
         return new Promise((resolve) => {
             this.color_picker.onDidTriggerButton(function (this: Agent, selection: any) {
-                this.color_picker.dispose();
+                // this.color_picker.dispose();
                 resolve(
                     selection.iconPath.path
                     .replace(
-                        `${this.base_dir}/${this.colors_path}`, 
+                        `${this.base_dir}${this.colors_path}`, 
                         ''
                     ).replace('.png', '')
                 );
-            });
+            }.bind(this));
         });
     }
     private _request_text(title: string): Promise<string> {
@@ -131,8 +133,8 @@ abstract class DecorationTool extends Agent {
     constructor(context: ExtensionContext, registrar: Function) {
         super(context, registrar);
     }
-    decorate(style: Style) {
-        console.log(style);
+    decorate(message: CommandMessage) {
+        console.log(message);
     }
 }
 
@@ -141,7 +143,7 @@ export class Highlighter extends DecorationTool {
         super(context, registrar);
         this.emitter.addListener(UserCommands.HIGHLIGHT, this.decorate);
     }
-    decorate(event: any) {
-        const e = event;
+    decorate(message: CommandMessage) {
+        const e = message;
     }
 }
