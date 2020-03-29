@@ -1,6 +1,11 @@
 import { EventEmitter } from "events";
-import { Selection, DecorationRenderOptions, QuickPickItem, QuickPick, window, ExtensionContext, InputBox, QuickInputButton, Uri } from "vscode";
+import { Selection, DecorationRenderOptions, QuickPickItem, QuickPick, window, ExtensionContext, InputBox, QuickInputButton, Uri, workspace } from "vscode";
 import { readdirSync } from "fs";
+
+export enum StorageDestinations {
+    GLOBAL = "globalState",
+    WORKSPACE = "workspaceState",
+}
 
 export enum UserCommands {
     HIGHLIGHT = "extension.highlightSelection",
@@ -11,15 +16,23 @@ export enum UserCommands {
 
 export type Picker = QuickPick<QuickPickItem>;
 export type Preferences = {};
+export interface StorageMessage {
+    identifier: string;
+    storage_destination: StorageDestinations;
+}
+
 export interface Event {
     name: string;
+    selection: Selection;
+    storage_destination: StorageDestinations;
+    uri: Uri;
 }
 export interface Style extends DecorationRenderOptions {}
 export interface CommandMessage {
     event: Event;
+    selection: Selection;
     style: Style;
 }
-
 abstract class Base {
     
     protected base_dir: string;
@@ -37,7 +50,33 @@ abstract class Base {
     }
 }
 
-abstract class Agent extends Base {
+class Storage extends Base {
+    protected context: ExtensionContext;
+    constructor(context: ExtensionContext) {
+        super(context);
+        this.context = context;
+    }
+
+    protected async load(message: StorageMessage) {
+        return this.context[
+            message.storage_destination
+        ].get(message.identifier);
+    }
+
+    protected async _on_store(event: StorageMessage) {
+
+        const highlights: any[] | undefined =
+        this.context[event.storage_destination].get(event.identifier);
+        if (!highlights) { return; }
+
+        highlights.push(event);
+
+        this.context[event.storage_destination]
+        .update(event.identifier, highlights);
+    }
+}
+
+abstract class Agent extends Storage {
 
     protected color_buttons: QuickInputButton[]; 
     protected color_picker: QuickPick<QuickPickItem>;
@@ -104,17 +143,26 @@ abstract class Agent extends Base {
     }
     private async _workflow_highlight() {
 
+        /** Get name and color */
         const value: string =
         await this._request_text("Give a name for this highlight to find it again!");
         const hex: string =
         await this._request_color();
 
+        /** Get Selection */
+        const selection = window.activeTextEditor?.selection;
+        if (!selection) {
+            window.showInformationMessage("Please make a selection and try again.");
+        }
+
+        /** Broadcast */
         this.emitter.emit(
             UserCommands.HIGHLIGHT,
             {
                 event: {
                     name: value,
                 },
+                selection,
                 style: {
                     isWholeLine: true,
                     light: {
@@ -129,13 +177,9 @@ abstract class Agent extends Base {
     }
 }
 
-abstract class DecorationTool extends Agent {
-    constructor(context: ExtensionContext, registrar: Function) {
-        super(context, registrar);
-    }
-    decorate(message: CommandMessage) {
-        console.log(message);
-    }
+declare abstract class DecorationTool extends Agent {
+    constructor(context: ExtensionContext, registrar: Function);
+    protected decorate(editor: any, message: CommandMessage): Promise<void>;
 }
 
 export class Highlighter extends DecorationTool {
@@ -143,7 +187,12 @@ export class Highlighter extends DecorationTool {
         super(context, registrar);
         this.emitter.addListener(UserCommands.HIGHLIGHT, this.decorate);
     }
-    decorate(message: CommandMessage) {
-        const e = message;
+    protected async decorate(editor: any, message: CommandMessage): Promise<void> {
+        editor.setDecorations(
+            window.createTextEditorDecorationType(
+                message.style,
+            ),
+            [message.selection],
+        );
     }
 }
